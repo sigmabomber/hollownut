@@ -136,7 +136,7 @@ public class PlayerMovement : MonoBehaviour
         ApplyBetterFallPhysics();
         HandleFacingDirection();
     }
-
+    private bool isLookingUp = false;
     private void GetInput()
     {
         horizontalInput = 0;
@@ -155,6 +155,21 @@ public class PlayerMovement : MonoBehaviour
         {
             StartCoroutine(Dash());
         }
+
+        // Toggle look up when pressing UpArrow
+        if (Input.GetKeyDown(KeyCode.UpArrow) && isGrounded && Mathf.Abs(horizontalInput) < 0.1f)
+        {
+            isLookingUp = true;
+        }
+
+        // Cancel look up when moving
+        if (Mathf.Abs(horizontalInput) > 0.1f)
+        {
+            isLookingUp = false;
+        }
+
+        // Update Animator
+        animator.SetBool("isLookingUp", isLookingUp);
 
         quickDropPressed = Input.GetKeyDown(Constants.PlayerData.PlayerControls.down);
     }

@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 316473806}
   - component: {fileID: 316473805}
   - component: {fileID: 316473809}
+  - component: {fileID: 316473810}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -200,17 +201,17 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0, y: -0.07}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
+    oldSize: {x: 1.25, y: 2}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1.22, y: 1.93}
   m_EdgeRadius: 0
 --- !u!212 &316473807
 SpriteRenderer:
@@ -256,7 +257,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_Sprite: {fileID: 5152726568728816561, guid: b0c32fbe5ce13674b8f73f8cc5e4b37b, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -322,14 +323,36 @@ MonoBehaviour:
   quickDropDuration: 0.18
   quickDropCooldown: 0.3
   cancelQuickDropOnJump: 1
-  groundCheckDistance: 0
-  groundCheckSize: {x: 0.8, y: 0.1}
+  groundCheckDistance: 0.57
+  groundCheckSize: {x: 1.2, y: 0.1}
   groundCheckOffset: {x: 0, y: -0.5}
   groundLayer:
     serializedVersion: 2
     m_Bits: 8
   wallCheckDistance: 0.5
   wallCheckHeight: 1
+--- !u!95 &316473810
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 316473804}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 1e63f4d4ad028e54fb0c7cb595fdf0ab, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
