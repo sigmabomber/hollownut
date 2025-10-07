@@ -52,7 +52,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float coyoteTime = 0.12f;
     [SerializeField] private float jumpBufferTime = 0.12f;
     [SerializeField] private int maxAirJumps = 1;
-    [SerializeField] private float variableJumpHeight = 0.5f;
+  //  [SerializeField] private float variableJumpHeight = 0.5f;
 
     [Header("Dash Settings")]
     [SerializeField] private float dashSpeed = 28f;
@@ -65,7 +65,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("Wall Settings")]
     [SerializeField] private float wallSlideSpeed = 2.5f;
     [SerializeField] private float wallJumpForce = 18f;
-    [SerializeField] private Vector2 wallJumpAngle = new Vector2(1.2f, 1.8f);
+    [SerializeField] private Vector2 wallJumpAngle = new (1.2f, 1.8f);
     [SerializeField] private float wallStickTime = 0.15f;
     [SerializeField] private float wallJumpLockTime = 0.1f; 
 
@@ -77,15 +77,17 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Ground Detection")]
     [SerializeField] private float groundCheckDistance = 0.6f;
-    [SerializeField] private Vector2 groundCheckSize = new Vector2(0.8f, 0.1f);
-    [SerializeField] private Vector2 groundCheckOffset = new Vector2(0, -0.5f);
+    [SerializeField] private Vector2 groundCheckSize = new (0.8f, 0.1f);
+    [SerializeField] private Vector2 groundCheckOffset = new (0, -0.5f);
     [SerializeField] private LayerMask groundLayer = ~0; 
 
     [Header("Wall Detection")]
     [SerializeField] private float wallCheckDistance = 0.5f;
-    [SerializeField] private float wallCheckHeight = 1f;
+ //   [SerializeField] private float wallCheckHeight = 1f;
 
     private float wallJumpLockTimer;
+
+    private float originalGravity = 3.5f;
 
     void Start()
     {
@@ -94,6 +96,8 @@ public class PlayerMovement : MonoBehaviour
         animator = GetComponent<Animator>();
 
         rb.gravityScale = gravityScale;
+
+         originalGravity = rb.gravityScale;
 
         groundLayer = LayerMask.GetMask("Ground");
         if (groundLayer == 0)
@@ -133,7 +137,7 @@ public class PlayerMovement : MonoBehaviour
             HandleMovement();
         }
 
-        ApplyBetterFallPhysics();
+        ApplyFallPhysics();
         HandleFacingDirection();
     }
     private bool isLookingUp = false;
@@ -156,19 +160,16 @@ public class PlayerMovement : MonoBehaviour
             StartCoroutine(Dash());
         }
 
-        // Toggle look up when pressing UpArrow
-        if (Input.GetKeyDown(KeyCode.UpArrow) && isGrounded && Mathf.Abs(horizontalInput) < 0.1f)
+        if (Input.GetKey(Constants.PlayerData.PlayerControls.up) && isGrounded && Mathf.Abs(horizontalInput) < 0.1f)
         {
             isLookingUp = true;
         }
 
-        // Cancel look up when moving
         if (Mathf.Abs(horizontalInput) > 0.1f)
         {
             isLookingUp = false;
         }
 
-        // Update Animator
         animator.SetBool("isLookingUp", isLookingUp);
 
         quickDropPressed = Input.GetKeyDown(Constants.PlayerData.PlayerControls.down);
@@ -258,11 +259,11 @@ public class PlayerMovement : MonoBehaviour
         rb.linearVelocity = new Vector2(Mathf.Clamp(currentSpeed + movement, -maxSpeed, maxSpeed), rb.linearVelocity.y);
     }
 
-    private void ApplyBetterFallPhysics()
+    private void ApplyFallPhysics()
     {
         if (rb.linearVelocity.y < 0)
         {
-            rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
+            rb.linearVelocity += (fallMultiplier - 1) * Physics2D.gravity.y * Time.fixedDeltaTime * Vector2.up;
         }
     }
 
@@ -313,12 +314,9 @@ public class PlayerMovement : MonoBehaviour
         isQuickDropping = true;
         quickDropCooldownTimer = quickDropCooldown;
 
-        float originalGravity = rb.gravityScale;
         rb.gravityScale = 0;
 
-        if (spriteRenderer != null)
-            spriteRenderer.color = new Color(0.7f, 0.9f, 1f, 0.8f);
-
+        
         float timer = 0f;
         while (timer < quickDropDuration && !isGrounded)
         {
@@ -377,10 +375,9 @@ public class PlayerMovement : MonoBehaviour
         canDash = false;
         isDashing = true;
 
-        float originalGravity = rb.gravityScale;
         rb.gravityScale = 0;
 
-        Vector2 dashDirection = new Vector2(horizontalInput, 0);
+        Vector2 dashDirection = new (horizontalInput, 0);
 
         if (dashDirection == Vector2.zero)
         {
@@ -390,8 +387,7 @@ public class PlayerMovement : MonoBehaviour
         dashDirection = dashDirection.normalized;
         rb.linearVelocity = dashDirection * dashSpeed;
 
-        if (spriteRenderer != null)
-            spriteRenderer.color = new Color(1, 1, 1, 0.6f);
+      
 
         yield return new WaitForSeconds(dashTime);
 
@@ -466,8 +462,11 @@ public class PlayerMovement : MonoBehaviour
 
         Gizmos.color = isOnWall ? Color.blue : Color.yellow;
         int dir = facingRight ? 1 : -1;
-        Gizmos.DrawLine(transform.position, (Vector2)transform.position + Vector2.right * dir * wallCheckDistance);
+        Gizmos.DrawLine(transform.position, (Vector2)transform.position + dir * wallCheckDistance * Vector2.right);
     }
+
+
+
     public bool IsGrounded() => isGrounded;
     public bool IsDashing() => isDashing;
     public bool IsWallSliding() => isWallSliding;

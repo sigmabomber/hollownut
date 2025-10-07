@@ -4,7 +4,7 @@ using UnityEngine;
 public class HealthModule : MonoBehaviour
 {
 
-    protected float currentHealth;
+    public float currentHealth;
     protected float maxHealth;
 
 
