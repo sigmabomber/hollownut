@@ -1,17 +1,22 @@
 using System;
+using System.Collections;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
 {
-
+    private SpriteRenderer playerSprite;
 
     private HealthModule healthModule;
 
     private float currentHealth;
+
+
+    
     void Start()
     {
-        healthModule = this.GetComponent<HealthModule>();
+        InitializeComponents();
+        
 
         healthModule.Initialize(100f);
 
@@ -20,6 +25,22 @@ public class PlayerHealth : MonoBehaviour
         healthModule.onHealthChanged += OnHealthChanged;
     }
 
+    void InitializeComponents()
+    {
+        healthModule = GetComponent<HealthModule>();
+        playerSprite = GetComponent<SpriteRenderer>();
+
+    }
+
+
+    IEnumerator FlashColor(Color color)
+    {
+        playerSprite.color = color;
+        
+        yield return new WaitForSeconds(0.1f);
+
+        playerSprite.color = Color.white;
+    }
 
     void OnHealthChanged(float newCurrent, float max)
     {
@@ -29,11 +50,16 @@ public class PlayerHealth : MonoBehaviour
         if (newCurrent < currentHealth)
         {
             Debug.Log("Player has taken damage!");
+
+            StartCoroutine(FlashColor(Color.red));
             
         }
         else
         {
             Debug.Log("Player has healed");
+            StartCoroutine(FlashColor(Color.green));
+
+
         }
     }
 }

@@ -12,6 +12,9 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement State")]
     private float horizontalInput;
     private bool facingRight = true;
+    private bool isRunning = false;
+    public float walkingTimer;
+    [SerializeField] private float timeUntilRunning = 3f;
     private bool isGrounded;
     private int airJumpsRemaining;
 
@@ -38,7 +41,8 @@ public class PlayerMovement : MonoBehaviour
     private float quickDropCooldownTimer;
 
     [Header("Movement Settings")]
-    [SerializeField] private float maxSpeed = 10f;
+    [SerializeField] private float maxRunningSpeed = 20f;
+    [SerializeField] private float maxWalkSpeed = 10f;
     [SerializeField] private float acceleration = 50f;
     [SerializeField] private float deceleration = 45f;
     [SerializeField] private float airAcceleration = 45f;
@@ -144,8 +148,40 @@ public class PlayerMovement : MonoBehaviour
     private void GetInput()
     {
         horizontalInput = 0;
-        if (Input.GetKey(Constants.PlayerData.PlayerControls.left)) horizontalInput -= 1;
-        if (Input.GetKey(Constants.PlayerData.PlayerControls.right)) horizontalInput += 1;
+        if (Input.GetKey(Constants.PlayerData.PlayerControls.left))
+        {
+            horizontalInput -= 1;
+
+            if (walkingTimer <= timeUntilRunning)
+            {
+                walkingTimer += Time.deltaTime;
+            }
+            else
+            {
+                isRunning = true;
+            }
+
+            
+        }
+
+        if (Input.GetKeyUp(Constants.PlayerData.PlayerControls.left) || Input.GetKeyUp(Constants.PlayerData.PlayerControls.right))
+        {
+            isRunning = false;
+           // walkingTimer = 0;
+        }
+        if (Input.GetKey(Constants.PlayerData.PlayerControls.right))
+        {
+            horizontalInput += 1;
+            if (walkingTimer <= timeUntilRunning)
+            {
+                walkingTimer += Time.deltaTime;
+            }
+            else
+            {
+                isRunning = true;
+            }
+
+        }
 
         jumpPressed = Input.GetKeyDown(Constants.PlayerData.PlayerControls.jump);
         jumpHeld = Input.GetKey(Constants.PlayerData.PlayerControls.jump);
@@ -172,7 +208,7 @@ public class PlayerMovement : MonoBehaviour
 
         animator.SetBool("isLookingUp", isLookingUp);
 
-        quickDropPressed = Input.GetKeyDown(Constants.PlayerData.PlayerControls.down);
+       // quickDropPressed = Input.GetKeyDown(Constants.PlayerData.PlayerControls.down);
     }
 
     private void CheckGrounded()
@@ -240,7 +276,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleMovement()
     {
-        float targetSpeed = horizontalInput * maxSpeed;
+        print(isRunning);
+        float targetSpeed = horizontalInput * (isRunning ? maxRunningSpeed : maxWalkSpeed);
         float currentSpeed = rb.linearVelocity.x;
         float speedDiff = targetSpeed - currentSpeed;
 
@@ -254,9 +291,9 @@ public class PlayerMovement : MonoBehaviour
             accelRate = isGrounded ? deceleration : airDeceleration;
         }
 
-        float movement = speedDiff * accelRate * Time.fixedDeltaTime;
+        float movement = speedDiff * accelRate * Time.deltaTime;
 
-        rb.linearVelocity = new Vector2(Mathf.Clamp(currentSpeed + movement, -maxSpeed, maxSpeed), rb.linearVelocity.y);
+        rb.linearVelocity = new Vector2(Mathf.Clamp(currentSpeed + movement, (isRunning ? -maxRunningSpeed : -maxWalkSpeed), (isRunning ? maxRunningSpeed : maxWalkSpeed)), rb.linearVelocity.y);
     }
 
     private void ApplyFallPhysics()
