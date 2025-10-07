@@ -11,8 +11,10 @@ public class PlayerHealth : MonoBehaviour
 
     private float currentHealth;
 
+    private Rigidbody2D rb; 
+    [SerializeField] private float knockbackForce = 5f;
 
-    
+
     void Start()
     {
         InitializeComponents();
@@ -30,6 +32,8 @@ public class PlayerHealth : MonoBehaviour
         healthModule = GetComponent<HealthModule>();
         playerSprite = GetComponent<SpriteRenderer>();
 
+        rb = GetComponent<Rigidbody2D>();
+
     }
 
 
@@ -46,20 +50,23 @@ public class PlayerHealth : MonoBehaviour
     {
         Debug.Log($"Current Health: {newCurrent}hp, Max Health: {max}hp");
 
-
         if (newCurrent < currentHealth)
         {
             Debug.Log("Player has taken damage!");
-
             StartCoroutine(FlashColor(Color.red));
-            
+
+            if (gameObject.TryGetComponent(out IKnockbackable knockbackable))
+            {
+                Vector2 knockbackDir = new Vector2(-transform.localScale.x, 0f);
+                knockbackable.ApplyKnockback(new KnockbackData(knockbackDir, 100f, 0.1f));
+            }
         }
         else
         {
             Debug.Log("Player has healed");
             StartCoroutine(FlashColor(Color.green));
-
-
         }
+
+        currentHealth = newCurrent; // Make sure to update this
     }
 }

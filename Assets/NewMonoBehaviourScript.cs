@@ -36,6 +36,11 @@ public class NewMonoBehaviourScript : MonoBehaviour
             if (health != null)
             {
                 health.TakeDamage(10);
+                
+            }
+            else
+            {
+                print(":(");
             }
         }
     }
