@@ -55,10 +55,10 @@ public class PlayerHealth : MonoBehaviour
             Debug.Log("Player has taken damage!");
             StartCoroutine(FlashColor(Color.red));
 
-            if (gameObject.TryGetComponent(out IKnockbackable knockbackable))
+            if (gameObject.TryGetComponent(out IKnockback knockbackable))
             {
                 Vector2 knockbackDir = new Vector2(-transform.localScale.x, 0f);
-                knockbackable.ApplyKnockback(new KnockbackData(knockbackDir, 100f, 0.1f));
+               // knockbackable.ApplyKnockback(new KnockbackData(knockbackDir, 100f, 0.1f));
             }
         }
         else

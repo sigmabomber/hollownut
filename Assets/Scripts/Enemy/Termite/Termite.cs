@@ -3,7 +3,7 @@ using System.Collections;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(EnemyModule))]
-public class Enemy : MonoBehaviour
+public class Termite : MonoBehaviour
 {
     private EnemyModule enemyModule;
     private Rigidbody2D rb;
@@ -28,7 +28,7 @@ public class Enemy : MonoBehaviour
     public float jumpWindup = 0.2f;
     public float missWaitTime = 0.5f;
     public float jumpArcHeight = 2f;
-
+    public float weightToAdd = 2f;
     [Header("Hype Up Jumps")]
     public int maxHypeJumps = 3;
     public float hypeJumpForce = 3f;
@@ -45,7 +45,9 @@ public class Enemy : MonoBehaviour
     public float idleJumpIntervalMin = 0.5f;
     public float idleJumpIntervalMax = 1.5f;
     public float groundCheckDistance = 2f;
-    public LayerMask groundLayerMask = 1; // Default layer
+    public LayerMask groundLayerMask = 1;
+
+    
 
     private void Awake()
     {
@@ -285,7 +287,7 @@ public class Enemy : MonoBehaviour
 
             localStickOffset = lastContactTarget.InverseTransformPoint(lastContactPoint);
 
-            StartCoroutine(StickToPlayerAtPoint());
+            StartCoroutine(StickToPlayerAtPoint(collision.transform));
         }
     }
 
@@ -301,7 +303,7 @@ public class Enemy : MonoBehaviour
                 lastContactPoint = closestPoint;
                 localStickOffset = lastContactTarget.InverseTransformPoint(lastContactPoint);
 
-                StartCoroutine(StickToPlayerAtPoint());
+                StartCoroutine(StickToPlayerAtPoint(playerCollider.transform));
             }
         }
 
@@ -312,17 +314,31 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    private IEnumerator StickToPlayerAtPoint()
+    private IEnumerator StickToPlayerAtPoint(Transform player)
     {
         if (lastContactTarget == null) yield break;
 
         isSticking = true;
         canStick = false;
 
-        rb.linearVelocity = Vector2.zero;
-        rb.angularVelocity = 0f;
-        rb.isKinematic = true;
-        boxCollider.isTrigger = true;
+        // Try to get SlowedDown component
+
+
+        EffectsModule.Instance.SlowedDown(new SlowedDownData(weightToAdd, player.GetComponent<Rigidbody2D>()));
+        
+
+        // Stop physics while sticking
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            rb.isKinematic = true;
+        }
+
+        if (boxCollider != null)
+        {
+            boxCollider.isTrigger = true;
+        }
 
         transform.SetParent(lastContactTarget);
 
@@ -346,17 +362,27 @@ public class Enemy : MonoBehaviour
             transform.SetParent(null);
         }
 
-        rb.isKinematic = false;
-        boxCollider.isTrigger = false;
+        // Restore physics
+        if (rb != null)
+        {
+            rb.isKinematic = false;
 
-        // Jump off in a direction that avoids the player and is safe
-        Vector2 jumpOffDir = GetAvoidanceDirection();
-        rb.AddForce(jumpOffDir * (jumpForce * 0.6f), ForceMode2D.Impulse);
+            Vector2 jumpOffDir = GetAvoidanceDirection();
+            rb.AddForce(jumpOffDir * (jumpForce * 0.6f), ForceMode2D.Impulse);
+        }
+
+        if (boxCollider != null)
+        {
+            boxCollider.isTrigger = false;
+        }
+
+
+        EffectsModule.Instance.UndoSlow(new SlowedDownData(weightToAdd, player.GetComponent<Rigidbody2D>()));
+        
 
         isSticking = false;
         localStickOffset = Vector3.zero;
 
-        // Start avoidance behavior after unsticking
         StartCoroutine(AvoidanceBehavior());
 
         isWaiting = true;

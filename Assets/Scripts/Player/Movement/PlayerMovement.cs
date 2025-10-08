@@ -46,7 +46,6 @@ public class PlayerMovement : MonoBehaviour
     private float quickDropCooldownTimer;
 
     [Header("Movement Settings")]
-    [SerializeField] private float maxRunningSpeed = 8.3f;
     [SerializeField] private float maxWalkSpeed = 8.3f;
     [SerializeField] private float acceleration = 200f;
     [SerializeField] private float deceleration = 200f;

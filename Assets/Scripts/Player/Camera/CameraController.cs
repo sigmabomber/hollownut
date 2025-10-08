@@ -16,9 +16,6 @@ public class CameraController : MonoBehaviour
     public CameraZone currentZone;
     private Vector2 minBounds, maxBounds;
 
-    [Header("Debug")]
-    public bool enableDebug = true;
-    public bool showGizmos = true;
 
     private Vector3 velocity = Vector3.zero;
     private float lastPlayerX;
@@ -57,10 +54,7 @@ public class CameraController : MonoBehaviour
 
         transform.position = smoothedPos;
 
-        if (enableDebug)
-        {
-            Debug.Log($"CameraController: Player Y: {player.position.y}, Target Y: {currentTargetPos.y}, Current Y: {transform.position.y}");
-        }
+        
     }
 
     private Vector3 CalculateHollowKnightTarget()
@@ -127,53 +121,7 @@ public class CameraController : MonoBehaviour
         return boundedPos;
     }
 
-    // Draw debug gizmos
-    private void OnDrawGizmos()
-    {
-        if (!showGizmos || !Application.isPlaying) return;
-
-        // Draw camera bounds
-        if (currentZone != null)
-        {
-            Gizmos.color = Color.yellow;
-            Vector3 center = new Vector3(
-                (minBounds.x + maxBounds.x) * 0.5f,
-                (minBounds.y + maxBounds.y) * 0.5f,
-                transform.position.z
-            );
-            Vector3 size = new Vector3(
-                maxBounds.x - minBounds.x,
-                maxBounds.y - minBounds.y,
-                0.1f
-            );
-            Gizmos.DrawWireCube(center, size);
-        }
-
-        // Draw vertical thresholds
-        if (enableVerticalFollow)
-        {
-            Vector3 camPos = transform.position;
-
-            // Dead zone (green)
-            Gizmos.color = Color.green;
-            float deadZoneTop = camPos.y + verticalDeadZone;
-            float deadZoneBottom = camPos.y - verticalDeadZone;
-            Gizmos.DrawLine(new Vector3(camPos.x - 5, deadZoneTop, camPos.z), new Vector3(camPos.x + 5, deadZoneTop, camPos.z));
-            Gizmos.DrawLine(new Vector3(camPos.x - 5, deadZoneBottom, camPos.z), new Vector3(camPos.x + 5, deadZoneBottom, camPos.z));
-
-            // Follow threshold (red)
-            Gizmos.color = Color.red;
-            float thresholdTop = camPos.y + verticalFollowThreshold;
-            float thresholdBottom = camPos.y - verticalFollowThreshold;
-            Gizmos.DrawLine(new Vector3(camPos.x - 5, thresholdTop, camPos.z), new Vector3(camPos.x + 5, thresholdTop, camPos.z));
-            Gizmos.DrawLine(new Vector3(camPos.x - 5, thresholdBottom, camPos.z), new Vector3(camPos.x + 5, thresholdBottom, camPos.z));
-
-            // Draw current target
-            Gizmos.color = Color.blue;
-            Gizmos.DrawWireCube(new Vector3(currentTargetPos.x, currentTargetPos.y, camPos.z), new Vector3(1f, 1f, 0.1f));
-        }
-    }
-
+  
     public static void ToggleFollow(bool follow)
     {
         CameraController[] cameras = FindObjectsOfType<CameraController>();
@@ -186,9 +134,6 @@ public class CameraController : MonoBehaviour
     public void SetZone(CameraZone zone)
     {
         currentZone = zone;
-        if (enableDebug)
-        {
-            Debug.Log($"CameraController: Zone changed to {zone?.name}");
-        }
+       
     }
 }
