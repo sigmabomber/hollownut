@@ -1,131 +1,270 @@
+using System.Collections;
 using UnityEngine;
 
 public class StickAttack : MonoBehaviour
 {
-    void Start()
+    public enum Direction { Up, Right, Left, Down }
+
+    [Header("Preset Transforms (local)")]
+    public Vector3 upRotation = new Vector3(331.752f, 16.407f, 112.33f);
+    public Vector3 upPosition = new Vector3(-2.15799999f, 1.86300004f, 0.0260000005f);
+    public Vector3 rightRotation = new Vector3(12.3462868f, 30.1126213f, 33.9791946f);
+    public Vector3 rightPosition = new Vector3(-0.907000005f, -0.349999994f, 0.0260000005f);
+    public Vector3 leftRotation = new Vector3(12.3462868f, 180.791306f, 33.9791946f);
+    public Vector3 leftPosition = new Vector3(-4.21000004f, -0.300000012f, 0.0260000005f);
+    public Vector3 downRotation = new Vector3(352.184174f, 170.380417f, 261.541473f);
+    public Vector3 downPosition = new Vector3(-2.1400001f, -2.3499999f, 0.0260000005f);
+
+    [Header("Position Adjustments")]
+    public float horizontalDistance = 1.5f; // Distance from player for left/right attacks
+    public float verticalDistance = 1.5f;   // Distance from player for up/down attacks
+    public float centerX = 0f;              // Center X position for up/down attacks
+
+    [Header("References")]
+    public ParticleSystem swingEffectPrefab;
+
+    [Header("Swing Settings")]
+    public Direction swingDirection = Direction.Right;
+    public KeyCode swingKey = KeyCode.Mouse0;
+    public KeyCode leftKey = KeyCode.A;
+    public KeyCode rightKey = KeyCode.D;
+    public KeyCode upKey = KeyCode.W;
+    public KeyCode downKey = KeyCode.S;
+    public float swingDuration = 0.25f;
+    public bool resetToInitialPoseAfterSwing = true;
+
+    // internal
+    private Vector3 initialLocalPos;
+    private Quaternion initialLocalRot;
+    private bool isSwinging = false;
+    private Coroutine currentSwingCoroutine;
+
+    void Awake()
     {
-        CreateSlashEffect();
+        // Store initial transform
+        initialLocalPos = transform.localPosition;
+        initialLocalRot = transform.localRotation;
+
+        Debug.Log("StickAttack initialized");
+        ApplyDistanceAdjustments();
     }
 
-    void CreateSlashEffect()
+    void Update()
     {
-        // Get or add Particle System component
-        ParticleSystem ps = GetComponent<ParticleSystem>();
-        if (ps == null) ps = gameObject.AddComponent<ParticleSystem>();
+        // Update swing direction based on movement keys
+        UpdateSwingDirection();
 
-        // Configure the particle system in code
-        var main = ps.main;
-        main.startSpeed = 0f;
-        main.startLifetime = 0.5f;
-        main.startSize = 0.3f;
-        main.maxParticles = 100;
-        main.simulationSpace = ParticleSystemSimulationSpace.World;
-        main.loop = false;
-
-        // Emission - burst all particles at start
-        var emission = ps.emission;
-        emission.rateOverTime = 0f;
-        emission.SetBursts(new ParticleSystem.Burst[] {
-            new ParticleSystem.Burst(0f, 50)
-        });
-
-        // Shape - use Circle with 180 degree arc for half-circle
-        var shape = ps.shape;
-        shape.shapeType = ParticleSystemShapeType.Circle;
-        shape.radius = 2f;
-        shape.arc = 180f;
-        shape.arcMode = ParticleSystemShapeMultiModeValue.Random;
-        shape.arcSpread = 0f;
-
-        // Make particles follow arc path using velocity
-        var velocity = ps.velocityOverLifetime;
-        velocity.enabled = true;
-        velocity.space = ParticleSystemSimulationSpace.Local;
-
-        // Create arc motion - particles move along X axis with Y arc
-        AnimationCurve curveX = new AnimationCurve(
-            new Keyframe(0f, -3f),
-            new Keyframe(0.3f, 0f),
-            new Keyframe(1f, 3f)
-        );
-        AnimationCurve curveY = new AnimationCurve(
-            new Keyframe(0f, 0f),
-            new Keyframe(0.5f, 2f),
-            new Keyframe(1f, 0f)
-        );
-        AnimationCurve curveZ = new AnimationCurve(
-            new Keyframe(0f, 0f),
-            new Keyframe(1f, 0f)
-        );
-
-        // Set all velocity components to use Curve mode
-        velocity.x = new ParticleSystem.MinMaxCurve(4f, curveX);
-        velocity.y = new ParticleSystem.MinMaxCurve(3f, curveY);
-        velocity.z = new ParticleSystem.MinMaxCurve(1f, curveZ);
-
-        // Color over lifetime - fade based on X position (left to right)
-        var color = ps.colorOverLifetime;
-        color.enabled = true;
-
-        Gradient gradient = new Gradient();
-        gradient.SetKeys(
-            new GradientColorKey[] {
-                new GradientColorKey(Color.white, 0f),    // Left side - bright
-                new GradientColorKey(Color.cyan, 0.3f),   // Middle
-                new GradientColorKey(Color.blue, 0.6f),   // Right side
-                new GradientColorKey(Color.black, 1f)     // End
-            },
-            new GradientAlphaKey[] {
-                new GradientAlphaKey(1f, 0f),    // Left side - fully visible
-                new GradientAlphaKey(1f, 0.3f),  // Still visible in middle
-                new GradientAlphaKey(0.5f, 0.6f), // Start fading on right side
-                new GradientAlphaKey(0f, 1f)      // Completely transparent at end
-            }
-        );
-        color.color = gradient;
-
-        // Size over lifetime - fade along X axis
-        var size = ps.sizeOverLifetime;
-        size.enabled = true;
-        AnimationCurve sizeCurve = new AnimationCurve(
-            new Keyframe(0f, 0.4f),  // Start medium size on left
-            new Keyframe(0.5f, 0.6f), // Grow in middle
-            new Keyframe(0.8f, 0.3f), // Shrink on right side
-            new Keyframe(1f, 0f)      // Disappear at end
-        );
-        size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
-
-        // Rotation over lifetime
-        var rotation = ps.rotationOverLifetime;
-        rotation.enabled = true;
-        rotation.z = new ParticleSystem.MinMaxCurve(2f, 6f);
-
-        // Renderer settings
-        var renderer = ps.GetComponent<ParticleSystemRenderer>();
-        if (renderer != null)
+        // Trigger swing
+        if (!isSwinging && Input.GetKeyDown(swingKey))
         {
-            renderer.material = CreateParticleMaterial();
+            if (currentSwingCoroutine != null)
+                StopCoroutine(currentSwingCoroutine);
+
+            currentSwingCoroutine = StartCoroutine(DoSwing(swingDirection));
         }
     }
 
-    private Material CreateParticleMaterial()
+    private void UpdateSwingDirection()
     {
-        Material material = new Material(Shader.Find("Particles/Standard Unlit"));
-        material.color = Color.white;
-        return material;
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.E))
+        // Only update direction if keys are pressed and we're not swinging
+        if (!isSwinging)
         {
-            // Clear and play the particle system
-            ParticleSystem ps = GetComponent<ParticleSystem>();
-            if (ps != null)
+            if (Input.GetKey(leftKey))
             {
-                ps.Clear();
-                ps.Play();
+                swingDirection = Direction.Left;
+            }
+            else if (Input.GetKey(rightKey))
+            {
+                swingDirection = Direction.Right;
+            }
+            else if (Input.GetKey(upKey))
+            {
+                swingDirection = Direction.Up;
+            }
+            else if (Input.GetKey(downKey))
+            {
+                swingDirection = Direction.Down;
             }
         }
+    }
+
+    public IEnumerator DoSwing(Direction direction)
+    {
+        isSwinging = true;
+
+        Debug.Log("Starting swing in direction: " + direction);
+
+        // Get the local position and rotation for the chosen direction
+        (Vector3 localPos, Quaternion localRot) = GetPoseForDirection(direction);
+
+        // Apply the swing pose
+        transform.localPosition = localPos;
+        transform.localRotation = localRot;
+
+        Debug.Log("Swing position - Local: " + localPos + ", World: " + transform.position);
+
+        // Spawn particle effect at the swing position (in world space)
+        SpawnEffectAtLocalPose(localPos, localRot);
+
+        // Wait for the swing duration
+        yield return new WaitForSeconds(swingDuration);
+
+        // Reset to initial pose if needed
+        if (resetToInitialPoseAfterSwing)
+        {
+            transform.localPosition = initialLocalPos;
+            transform.localRotation = initialLocalRot;
+        }
+
+        isSwinging = false;
+        currentSwingCoroutine = null;
+    }
+
+    private (Vector3, Quaternion) GetPoseForDirection(Direction dir)
+    {
+        switch (dir)
+        {
+            case Direction.Up:
+                return (upPosition, Quaternion.Euler(upRotation));
+            case Direction.Right:
+                return (rightPosition, Quaternion.Euler(rightRotation));
+            case Direction.Left:
+                return (leftPosition, Quaternion.Euler(leftRotation));
+            case Direction.Down:
+                return (downPosition, Quaternion.Euler(downRotation));
+            default:
+                return (initialLocalPos, initialLocalRot);
+        }
+    }
+
+    private void SpawnEffectAtLocalPose(Vector3 localPos, Quaternion localRot)
+    {
+        if (swingEffectPrefab == null)
+        {
+            Debug.LogWarning("Swing effect prefab is not assigned!");
+            return;
+        }
+
+        try
+        {
+            // Make sure we have a parent
+            if (transform.parent == null)
+            {
+                Debug.LogError("Stick has no parent! Cannot calculate world position properly.");
+                return;
+            }
+
+            // Calculate world position: player position + local offset
+            Vector3 worldPos = transform.parent.position + localPos;
+
+            // Calculate world rotation: player rotation * local rotation
+            Quaternion worldRot = transform.parent.rotation * localRot;
+
+            // Instantiate in world space (no parent) so particles don't move with player
+            ParticleSystem ps = Instantiate(swingEffectPrefab, worldPos, worldRot, transform.parent);
+
+            // Make sure it plays
+            ps.Play();
+
+            // Destroy after duration
+            float lifetime = ps.main.duration + ps.main.startLifetime.constantMax;
+            Destroy(ps.gameObject, lifetime);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("Error spawning particle effect: " + e.Message);
+        }
+    }
+
+    // Apply distance adjustments to make positions consistent
+    private void ApplyDistanceAdjustments()
+    {
+        // Normalize horizontal positions to be symmetric
+        rightPosition = new Vector3(horizontalDistance, rightPosition.y, rightPosition.z);
+        leftPosition = new Vector3(-horizontalDistance, leftPosition.y, leftPosition.z);
+
+        // Center up/down positions on X-axis
+        upPosition = new Vector3(centerX, verticalDistance, upPosition.z);
+        downPosition = new Vector3(centerX, -verticalDistance, downPosition.z);
+    }
+
+    // Editor tools to help adjust positions
+    [ContextMenu("Auto-Adjust Positions for Consistency")]
+    public void AutoAdjustPositions()
+    {
+        ApplyDistanceAdjustments();
+        Debug.Log("Positions adjusted");
+        PrintCurrentPositions();
+    }
+
+    [ContextMenu("Print Current Positions")]
+    public void PrintCurrentPositions()
+    {
+        Debug.Log("=== CURRENT POSITIONS ===");
+        Debug.Log("Right: " + rightPosition);
+        Debug.Log("Left: " + leftPosition);
+        Debug.Log("Up: " + upPosition);
+        Debug.Log("Down: " + downPosition);
+    }
+
+    [ContextMenu("Center Up/Down Attacks")]
+    public void CenterUpDownAttacks()
+    {
+        centerX = 0f;
+        ApplyDistanceAdjustments();
+        Debug.Log("Up/Down attacks centered on X-axis");
+    }
+
+    // Public method to trigger swing from other scripts
+    public void TriggerSwing(Direction direction = Direction.Right)
+    {
+        if (!isSwinging)
+        {
+            if (currentSwingCoroutine != null)
+                StopCoroutine(currentSwingCoroutine);
+
+            currentSwingCoroutine = StartCoroutine(DoSwing(direction));
+        }
+    }
+
+    // For debugging in the inspector
+    [ContextMenu("Test Up Swing")]
+    public void TestUpSwing() { TriggerSwing(Direction.Up); }
+
+    [ContextMenu("Test Right Swing")]
+    public void TestRightSwing() { TriggerSwing(Direction.Right); }
+
+    [ContextMenu("Test Left Swing")]
+    public void TestLeftSwing() { TriggerSwing(Direction.Left); }
+
+    [ContextMenu("Test Down Swing")]
+    public void TestDownSwing() { TriggerSwing(Direction.Down); }
+
+    // Draw debug gizmos in scene view
+    void OnDrawGizmosSelected()
+    {
+        if (transform.parent == null) return;
+
+        // Apply adjustments in editor too
+        if (!Application.isPlaying)
+        {
+            ApplyDistanceAdjustments();
+        }
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.parent.position + upPosition, 0.2f);
+        Gizmos.DrawLine(transform.parent.position, transform.parent.position + upPosition);
+
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.parent.position + rightPosition, 0.2f);
+        Gizmos.DrawLine(transform.parent.position, transform.parent.position + rightPosition);
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.parent.position + leftPosition, 0.2f);
+        Gizmos.DrawLine(transform.parent.position, transform.parent.position + leftPosition);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.parent.position + downPosition, 0.2f);
+        Gizmos.DrawLine(transform.parent.position, transform.parent.position + downPosition);
     }
 }
