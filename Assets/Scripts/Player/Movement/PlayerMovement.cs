@@ -20,7 +20,6 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement State")]
     private float horizontalInput;
     private bool facingRight = true;
-
     private bool isGrounded;
     private int airJumpsRemaining;
 
@@ -94,9 +93,13 @@ public class PlayerMovement : MonoBehaviour
     [Header("Wall Detection")]
     [SerializeField] private float wallCheckDistance = 0.5f;
 
+    [Header("Animation Settings")]
+    [SerializeField] private float animationSmoothSpeed = 15f;
+
     private float wallJumpLockTimer;
     private float originalGravity = 3.5f;
     private bool isLookingUp = false;
+    public float currentAnimSpeed = 0f;
 
     [Header("Keycodes")]
     private KeyCode leftKey = Constants.PlayerData.PlayerControls.left;
@@ -107,7 +110,7 @@ public class PlayerMovement : MonoBehaviour
     private KeyCode downKey = Constants.PlayerData.PlayerControls.down;
 
     [Header("Input Settings")]
-    [SerializeField] private float inputSmoothSpeed = 10f; // how fast input stages
+    [SerializeField] private float inputSmoothSpeed = 10f;
 
     void Start()
     {
@@ -150,7 +153,6 @@ public class PlayerMovement : MonoBehaviour
         if (Input.GetKey(leftKey)) targetInput -= 1f;
         if (Input.GetKey(rightKey)) targetInput += 1f;
 
-        // Smooth input using deltaTime
         horizontalInput = Mathf.MoveTowards(horizontalInput, targetInput, inputSmoothSpeed * Time.deltaTime);
 
         jumpPressed = Input.GetKeyDown(jumpKey);
@@ -295,8 +297,23 @@ public class PlayerMovement : MonoBehaviour
     private void UpdateAnimations()
     {
         if (animator == null) return;
-        float stagedSpeed = Mathf.Abs(horizontalInput); // smooth input drives blend tree
-        animator.SetFloat(SpeedHash, stagedSpeed);
+
+        float actualSpeed = Mathf.Abs(rb.linearVelocity.x);
+        float maxSpeed = maxWalkSpeed / weight;
+        float normalizedSpeed = Mathf.Clamp01(actualSpeed / maxSpeed);
+        float inputInfluence = Mathf.Abs(horizontalInput);
+
+        // Use different smoothing speeds for acceleration vs deceleration
+        float targetSpeed = Mathf.Lerp(normalizedSpeed, inputInfluence, 0.3f);
+
+        // Faster smoothing when decelerating to allow reverse transitions
+        float currentSmoothSpeed = (targetSpeed < currentAnimSpeed) ?
+            animationSmoothSpeed * 2f : // Faster when slowing down
+            animationSmoothSpeed;       // Normal when speeding up
+
+        currentAnimSpeed = Mathf.Lerp(currentAnimSpeed, targetSpeed, currentSmoothSpeed * Time.deltaTime);
+
+        animator.SetFloat(SpeedHash, currentAnimSpeed);
         animator.SetBool(IsGroundedHash, isGrounded);
         animator.SetBool(IsWallSlidingHash, isWallSliding);
         animator.SetBool(IsDashingHash, isDashing);
