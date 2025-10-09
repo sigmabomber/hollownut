@@ -22,32 +22,27 @@ public class Termite : MonoBehaviour
     public Sprite detectionSprite;
     private BoxCollider2D boxCollider;
 
-    [Header("Attack Settings")]
     public float jumpForce = 10f;
     public float stickDuration = 0.5f;
     public float jumpWindup = 0.2f;
     public float missWaitTime = 0.5f;
     public float jumpArcHeight = 2f;
     public float weightToAdd = 2f;
-    [Header("Hype Up Jumps")]
+
     public int maxHypeJumps = 3;
     public float hypeJumpForce = 3f;
     public float hypeJumpArcHeight = 1f;
     public float hypeJumpInterval = 0.3f;
     public float hypeWindup = 0.1f;
 
-    [Header("Avoidance Behavior")]
     public float avoidanceTime = 1f;
     public float avoidanceJumpForce = 6f;
 
-    [Header("Idle Movement")]
     public float idleJumpForce = 5f;
     public float idleJumpIntervalMin = 0.5f;
     public float idleJumpIntervalMax = 1.5f;
     public float groundCheckDistance = 2f;
     public LayerMask groundLayerMask = 1;
-
-    
 
     private void Awake()
     {
@@ -88,18 +83,13 @@ public class Termite : MonoBehaviour
     private IEnumerator AttackSequence()
     {
         isInAttackSequence = true;
-
-        // Random chance to perform hype jumps (0 to maxHypeJumps)
         int numHypeJumps = Random.Range(0, maxHypeJumps + 1);
 
-
-        // Perform small "hype up" jumps in place
         if (numHypeJumps > 0)
         {
             yield return StartCoroutine(PerformHypeJumps(numHypeJumps));
         }
 
-        // Final attack jump (only if we still have a target)
         if (target != null)
         {
             yield return StartCoroutine(FinalAttackRoutine());
@@ -116,22 +106,17 @@ public class Termite : MonoBehaviour
         {
             if (target == null) break;
 
-
-            // Brief windup for the hype jump
             yield return new WaitForSeconds(hypeWindup);
 
-            // Small vertical jump in place
             Vector2 force = Vector2.up * hypeJumpForce;
             Jump(force);
 
-            // Wait for next jump
             if (i < numJumps - 1)
             {
                 yield return new WaitForSeconds(hypeJumpInterval);
             }
         }
 
-        // Brief pause after hype jumps before attacking
         yield return new WaitForSeconds(0.2f);
         isHypingUp = false;
     }
@@ -147,12 +132,10 @@ public class Termite : MonoBehaviour
             yield break;
         }
 
-        // Horizontal direction toward player
         Vector2 dir = target.position - transform.position;
         dir.y = 0f;
         dir.Normalize();
 
-        // Add a small upward arc
         Vector2 force = dir * jumpForce + Vector2.up * jumpArcHeight;
         Jump(force);
 
@@ -167,13 +150,10 @@ public class Termite : MonoBehaviour
     {
         if (target == null)
         {
-            // If no target, just jump randomly away but check for safe ground
             return GetSafeDirection(new Vector2(Random.Range(-1f, 1f), Random.Range(0.2f, 0.8f)).normalized);
         }
 
         Vector2 awayFromPlayer = (transform.position - target.position).normalized;
-
-        // Add some randomness to avoidance
         awayFromPlayer += new Vector2(Random.Range(-0.5f, 0.5f), Random.Range(0.1f, 0.5f));
         awayFromPlayer.Normalize();
 
@@ -182,10 +162,8 @@ public class Termite : MonoBehaviour
 
     private Vector2 GetSafeDirection(Vector2 desiredDirection)
     {
-        // Check if the desired direction would lead off a platform
         Vector2 checkPosition = (Vector2)transform.position + desiredDirection * 2f;
 
-        // Perform ground check to see if there's ground in the desired direction
         RaycastHit2D groundCheck = Physics2D.Raycast(
             transform.position,
             desiredDirection,
@@ -193,7 +171,6 @@ public class Termite : MonoBehaviour
             groundLayerMask
         );
 
-        // Also check for ground below the target position
         RaycastHit2D groundBelow = Physics2D.Raycast(
             checkPosition + Vector2.up * 0.5f,
             Vector2.down,
@@ -201,19 +178,15 @@ public class Termite : MonoBehaviour
             groundLayerMask
         );
 
-        // If no ground in desired direction or ground is too far below, find a safer direction
         if (groundCheck.collider == null || groundBelow.collider == null)
         {
-
-            // Try alternative directions
             Vector2[] alternativeDirections = {
-                new Vector2(-desiredDirection.x, desiredDirection.y), // Opposite horizontal
-                new Vector2(desiredDirection.x * 0.5f, desiredDirection.y), // Slower horizontal
-                new Vector2(0f, 0.5f), // Mostly upward
-                new Vector2(Random.Range(-0.3f, 0.3f), 0.7f) // Random upward
+                new Vector2(-desiredDirection.x, desiredDirection.y),
+                new Vector2(desiredDirection.x * 0.5f, desiredDirection.y),
+                new Vector2(0f, 0.5f),
+                new Vector2(Random.Range(-0.3f, 0.3f), 0.7f)
             };
 
-            // Find first safe alternative direction
             foreach (Vector2 altDir in alternativeDirections)
             {
                 Vector2 altCheckPos = (Vector2)transform.position + altDir.normalized * 2f;
@@ -245,8 +218,6 @@ public class Termite : MonoBehaviour
     private IEnumerator AvoidanceBehavior()
     {
         isAvoidingPlayer = true;
-
-        // Perform 1-2 avoidance jumps
         int numAvoidanceJumps = Random.Range(1, 3);
 
         for (int i = 0; i < numAvoidanceJumps; i++)
@@ -262,9 +233,7 @@ public class Termite : MonoBehaviour
             yield return new WaitForSeconds(0.4f);
         }
 
-        // Wait a bit before considering attacking again
         yield return new WaitForSeconds(avoidanceTime);
-
         isAvoidingPlayer = false;
     }
 
@@ -321,13 +290,8 @@ public class Termite : MonoBehaviour
         isSticking = true;
         canStick = false;
 
-        // Try to get SlowedDown component
-
-
         EffectsModule.Instance.SlowedDown(new SlowedDownData(weightToAdd, player.GetComponent<Rigidbody2D>()));
-        
 
-        // Stop physics while sticking
         if (rb != null)
         {
             rb.linearVelocity = Vector2.zero;
@@ -336,16 +300,12 @@ public class Termite : MonoBehaviour
         }
 
         if (boxCollider != null)
-        {
             boxCollider.isTrigger = true;
-        }
 
         transform.SetParent(lastContactTarget);
 
         if (localStickOffset == Vector3.zero)
-        {
             localStickOffset = lastContactTarget.InverseTransformPoint(lastContactPoint);
-        }
 
         float stickTimer = 0f;
         while (stickTimer < stickDuration && lastContactTarget != null)
@@ -358,27 +318,19 @@ public class Termite : MonoBehaviour
         }
 
         if (lastContactTarget != null)
-        {
             transform.SetParent(null);
-        }
 
-        // Restore physics
         if (rb != null)
         {
             rb.isKinematic = false;
-
             Vector2 jumpOffDir = GetAvoidanceDirection();
             rb.AddForce(jumpOffDir * (jumpForce * 0.6f), ForceMode2D.Impulse);
         }
 
         if (boxCollider != null)
-        {
             boxCollider.isTrigger = false;
-        }
-
 
         EffectsModule.Instance.UndoSlow(new SlowedDownData(weightToAdd, player.GetComponent<Rigidbody2D>()));
-        
 
         isSticking = false;
         localStickOffset = Vector3.zero;
@@ -396,7 +348,6 @@ public class Termite : MonoBehaviour
         {
             if (!isWaiting && !isSticking && target == null && !isAvoidingPlayer && !isHypingUp)
             {
-                // Get a safe direction for idle movement
                 Vector2 desiredDir = new Vector2(Random.Range(-1f, 1f), 0f).normalized;
                 Vector2 safeDir = GetSafeDirection(desiredDir);
 
@@ -407,16 +358,13 @@ public class Termite : MonoBehaviour
         }
     }
 
-    // Visual debugging for ground checks
     private void OnDrawGizmosSelected()
     {
         if (Application.isPlaying)
         {
-            // Draw ground check distance
             Gizmos.color = Color.yellow;
             Gizmos.DrawLine(transform.position, transform.position + Vector3.down * groundCheckDistance);
 
-            // Draw current movement direction if any
             if (rb != null && rb.linearVelocity.magnitude > 0.1f)
             {
                 Gizmos.color = Color.blue;

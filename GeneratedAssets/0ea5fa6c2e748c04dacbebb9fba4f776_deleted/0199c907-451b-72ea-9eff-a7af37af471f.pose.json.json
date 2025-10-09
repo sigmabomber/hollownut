@@ -1,0 +1,11 @@
+{
+    "asset": "0ea5fa6c2e748c04dacbebb9fba4f776",
+    "fileName": "0199c907-451b-72ea-9eff-a7af37af471f.pose.json",
+    "prompt": "3D sword slash effect animation for a 2D Unity project",
+    "negativePrompt": "",
+    "model": "a9c27ca4-3ec9-43e8-96cd-ee891aba64c5",
+    "modelName": "Text to Motion",
+    "customSeed": 864855211,
+    "w3CTraceId": "93c49b38d3bbf45f1221c1a87e16fdb1",
+    "isTrimmed": false
+}

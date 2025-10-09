@@ -1,0 +1,11 @@
+{
+    "asset": "1872e27bf3aa3a348be5c3109eb16105",
+    "fileName": "0199c9b1-b363-75a7-bbf2-d4901c527a5d.pose.json",
+    "prompt": "slash attack animation where every slash that isn't named slash_0 is the beginning of the slash and midway all of them turn invisible, and the slash_0 turns visible and picks off where others left off.",
+    "negativePrompt": "",
+    "model": "a9c27ca4-3ec9-43e8-96cd-ee891aba64c5",
+    "modelName": "Text to Motion",
+    "customSeed": 1471537753,
+    "w3CTraceId": "46b1a592d05e9778a0df3f2108834af1",
+    "isTrimmed": false
+}

@@ -5,12 +5,12 @@ public class CameraController : MonoBehaviour
     [Header("Follow Settings")]
     public Transform player;
     public float smoothSpeed = 0.2f;
-    public Vector2 lookAhead = new Vector2(1.5f, 0f); // Remove vertical look-ahead
+    public Vector2 lookAhead = new Vector2(1.5f, 0f); 
 
     [Header("Hollow Knight Style Settings")]
-    public float verticalDeadZone = 1f; // Center dead zone where camera doesn't move vertically
-    public float verticalFollowThreshold = 2f; // Distance from center where camera starts following
-    public bool enableVerticalFollow = true; // Toggle vertical follow entirely
+    public float verticalDeadZone = 1f; 
+    public float verticalFollowThreshold = 2f; 
+    public bool enableVerticalFollow = true; 
 
     [Header("Zone Settings")]
     public CameraZone currentZone;
@@ -30,7 +30,6 @@ public class CameraController : MonoBehaviour
             lastPlayerX = player.position.x;
             lookAheadDirection = 1f;
             lookAheadTarget = lookAhead.x;
-            // Start at player position but clamped to zone
             Vector3 startPos = player.position;
             startPos.z = transform.position.z;
             transform.position = ApplyBounds(startPos);
@@ -45,10 +44,8 @@ public class CameraController : MonoBehaviour
         minBounds = currentZone.minBounds;
         maxBounds = currentZone.maxBounds;
 
-        // Calculate target position with Hollow Knight-style behavior
         currentTargetPos = CalculateHollowKnightTarget();
 
-        // Smoothly follow towards target
         Vector3 smoothedPos = Vector3.SmoothDamp(transform.position, currentTargetPos, ref velocity, smoothSpeed);
         smoothedPos.z = transform.position.z;
 
@@ -59,9 +56,8 @@ public class CameraController : MonoBehaviour
 
     private Vector3 CalculateHollowKnightTarget()
     {
-        Vector3 targetPos = transform.position; // Start from current camera position
+        Vector3 targetPos = transform.position; 
 
-        // Always follow horizontally with look-ahead
         float currentPlayerX = player.position.x;
         float xMovement = currentPlayerX - lastPlayerX;
 
@@ -75,7 +71,6 @@ public class CameraController : MonoBehaviour
 
         targetPos.x = player.position.x + lookAheadTarget;
 
-        // Hollow Knight vertical behavior
         if (enableVerticalFollow)
         {
             float verticalDelta = player.position.y - transform.position.y;
@@ -83,21 +78,16 @@ public class CameraController : MonoBehaviour
 
             if (absVerticalDelta > verticalFollowThreshold)
             {
-                // Player is far from camera center - follow directly
                 targetPos.y = player.position.y;
             }
             else if (absVerticalDelta > verticalDeadZone)
             {
-                // Player is outside dead zone but within threshold - partial follow
-                // This creates the "soft" follow effect
                 float followFactor = (absVerticalDelta - verticalDeadZone) / (verticalFollowThreshold - verticalDeadZone);
                 targetPos.y = Mathf.Lerp(transform.position.y, player.position.y, followFactor);
             }
-            // Else: Player is within dead zone - don't move vertically
         }
         else
         {
-            // No vertical follow - keep current Y
             targetPos.y = transform.position.y;
         }
 
