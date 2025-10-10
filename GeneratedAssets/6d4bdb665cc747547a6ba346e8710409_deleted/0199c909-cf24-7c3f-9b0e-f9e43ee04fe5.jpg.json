@@ -1,0 +1,20 @@
+{
+    "asset": "6d4bdb665cc747547a6ba346e8710409",
+    "fileName": "0199c909-cf24-7c3f-9b0e-f9e43ee04fe5.jpg",
+    "prompt": "Generate a PNG sprite based on the user's settings for a visually appealing design.",
+    "negativePrompt": "",
+    "model": "8dcf54e0-c670-4783-a721-57c13529c16c",
+    "modelName": "VFX Hits",
+    "customSeed": -1,
+    "w3CTraceId": "a7a537960c371c3cd77e775f3f0d1e6d",
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0
+}

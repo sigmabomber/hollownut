@@ -302,13 +302,11 @@ public class PlayerMovement : MonoBehaviour
         float normalizedSpeed = Mathf.Clamp01(actualSpeed / maxSpeed);
         float inputInfluence = Mathf.Abs(horizontalInput);
 
-        // Use different smoothing speeds for acceleration vs deceleration
         float targetSpeed = Mathf.Lerp(normalizedSpeed, inputInfluence, 0.3f);
 
-        // Faster smoothing when decelerating to allow reverse transitions
         float currentSmoothSpeed = (targetSpeed < currentAnimSpeed) ?
-            animationSmoothSpeed * 2f : // Faster when slowing down
-            animationSmoothSpeed;       // Normal when speeding up
+            animationSmoothSpeed * 2f : 
+            animationSmoothSpeed;       
 
         currentAnimSpeed = Mathf.Lerp(currentAnimSpeed, targetSpeed, currentSmoothSpeed * Time.deltaTime);
 

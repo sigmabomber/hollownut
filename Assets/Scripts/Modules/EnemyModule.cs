@@ -16,12 +16,11 @@ public class EnemyModule : MonoBehaviour
     [Header("Attack Settings")]
     public float attackCooldown = 1f;
 
-    // Events
     public Action<GameObject> OnTargetDetected;
     public Action OnStartAttack;
 
     private bool canAttack = true;
-    private GameObject target;
+    public GameObject target;
     private CircleCollider2D detectionCollider;
     private GameObject detectionVisual, attackVisual;
 
@@ -58,7 +57,6 @@ public class EnemyModule : MonoBehaviour
         detectionCollider.isTrigger = true;
         detectionCollider.radius = detectionRadius;
 
-        // Visuals (optional)
         if (detectionSprite != null)
         {
             detectionVisual = CreateVisual("DetectionCircle", detectionRadius, detectionColor);

@@ -2,12 +2,13 @@ using UnityEngine;
 
 public class CameraZone : MonoBehaviour
 {
-    public Vector2 minBounds; // Bottom-left corner of zone
-    public Vector2 maxBounds; // Top-right corner of zone
+    public Vector2 minBounds; 
+    public Vector2 maxBounds;
+
+
     public Transform camera;
     private void OnDrawGizmos()
     {
-        // Visualize the zone in editor
         Gizmos.color = Color.green;
         Vector3 center = new Vector3(
             (minBounds.x + maxBounds.x) / 2,
