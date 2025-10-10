@@ -348,10 +348,10 @@ MonoBehaviour:
   maxAirJumps: 1
   dashSpeed: 20
   dashTime: 0.2
-  dashCooldown: 1
+  dashCooldown: 0.6
   dashEndSpeedMultiplier: 0.6
   canDashInAir: 1
-  resetDashOnGround: 1
+  resetDashOnGround: 0
   wallSlideSpeed: 2
   wallJumpForce: 18
   wallJumpAngle: {x: 1, y: 1.5}
@@ -807,7 +807,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!50 &664897900
 Rigidbody2D:
   serializedVersion: 5
@@ -1179,7 +1179,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1075540559
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16479,7 +16479,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!58 &1752809732
 CircleCollider2D:
   m_ObjectHideFlags: 0
