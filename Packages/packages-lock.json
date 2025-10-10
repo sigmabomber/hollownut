@@ -28,11 +28,7 @@
     },
     "com.unity.2d.common": {
       "version": "11.0.1",
-<<<<<<< HEAD
-      "depth": 2,
-=======
       "depth": 1,
->>>>>>> origin/main
       "source": "registry",
       "dependencies": {
         "com.unity.burst": "1.8.4",
@@ -43,8 +39,6 @@
       },
       "url": "https://packages.unity.com"
     },
-<<<<<<< HEAD
-=======
     "com.unity.2d.enhancers": {
       "version": "1.0.0",
       "depth": 0,
@@ -57,7 +51,6 @@
       },
       "url": "https://packages.unity.com"
     },
->>>>>>> origin/main
     "com.unity.2d.pixel-perfect": {
       "version": "5.1.0",
       "depth": 1,
@@ -115,14 +108,6 @@
       },
       "url": "https://packages.unity.com"
     },
-<<<<<<< HEAD
-    "com.unity.ai.navigation": {
-      "version": "2.0.9",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.modules.ai": "1.0.0"
-=======
     "com.unity.ai.assistant": {
       "version": "1.0.0-pre.12",
       "depth": 0,
@@ -158,23 +143,27 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.ai.navigation": {
+      "version": "2.0.9",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.modules.ai": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
     "com.unity.ai.toolkit": {
       "version": "1.0.0-pre.20",
       "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.nuget.newtonsoft-json": "3.2.1"
->>>>>>> origin/main
       },
       "url": "https://packages.unity.com"
     },
     "com.unity.burst": {
       "version": "1.8.25",
-<<<<<<< HEAD
-      "depth": 2,
-=======
       "depth": 1,
->>>>>>> origin/main
       "source": "registry",
       "dependencies": {
         "com.unity.mathematics": "1.2.1",
@@ -191,11 +180,7 @@
     },
     "com.unity.collections": {
       "version": "2.5.7",
-<<<<<<< HEAD
-      "depth": 2,
-=======
       "depth": 1,
->>>>>>> origin/main
       "source": "registry",
       "dependencies": {
         "com.unity.burst": "1.8.19",
@@ -283,9 +268,6 @@
     },
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.5",
-<<<<<<< HEAD
-      "depth": 3,
-=======
       "depth": 2,
       "source": "registry",
       "dependencies": {},
@@ -294,7 +276,6 @@
     "com.unity.nuget.newtonsoft-json": {
       "version": "3.2.1",
       "depth": 1,
->>>>>>> origin/main
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -387,11 +368,7 @@
     },
     "com.unity.test-framework.performance": {
       "version": "3.2.0",
-<<<<<<< HEAD
-      "depth": 3,
-=======
       "depth": 2,
->>>>>>> origin/main
       "source": "registry",
       "dependencies": {
         "com.unity.test-framework": "1.1.33",

@@ -3,231 +3,177 @@ using UnityEngine;
 
 public class StickAttack : MonoBehaviour
 {
-    public enum Direction { Up, Right, Left, Down }
+    private KeyCode attackKey = Constants.PlayerData.PlayerControls.attack;
+    private KeyCode leftKey = Constants.PlayerData.PlayerControls.left;
+    private KeyCode rightKey = Constants.PlayerData.PlayerControls.right;
+    private KeyCode upKey = Constants.PlayerData.PlayerControls.up;
+    private KeyCode downKey = Constants.PlayerData.PlayerControls.down;
 
-    [Header("Preset Transforms (local)")]
-    public Vector3 upRotation = new Vector3(331.752f, 16.407f, 112.33f);
-    public Vector3 upPosition = new Vector3(-2.15799999f, 1.86300004f, 0.0260000005f);
-    public Vector3 rightRotation = new Vector3(12.3462868f, 30.1126213f, 33.9791946f);
-    public Vector3 rightPosition = new Vector3(-0.907000005f, -0.349999994f, 0.0260000005f);
-    public Vector3 leftRotation = new Vector3(12.3462868f, 180.791306f, 33.9791946f);
-    public Vector3 leftPosition = new Vector3(-4.21000004f, -0.300000012f, 0.0260000005f);
-    public Vector3 downRotation = new Vector3(352.184174f, 170.380417f, 261.541473f);
-    public Vector3 downPosition = new Vector3(-2.1400001f, -2.3499999f, 0.0260000005f);
+    private PlayerMovement plrMovement;
+    private Rigidbody2D rb;
+    private Animator playerAnimator;
+    public Animator slashAnimator;
+    public GameObject slashObj;
+    private int slashCombo = 1;
+    // Animation hashes
+    private static readonly int StartAttackHash = Animator.StringToHash("StartAttack");
+    private static readonly int AttackDirectionHash = Animator.StringToHash("SlashDirection");
+    private static readonly int SlashComboHash = Animator.StringToHash("SlashCombo");
+  
 
-    [Header("Position Adjustments")]
-    public float horizontalDistance = 1.5f; 
-    public float verticalDistance = 1.5f;   
-    public float centerX = 0f;             
+    // Attack parameters
+    private bool canAttack = true;
+    private bool attacking = false;
+    [SerializeField] private float attackCooldown = 0.4f;
+    [SerializeField] private float attackDuration = 0.2f;
 
-    [Header("References")]
-    public ParticleSystem swingEffectPrefab;
+    // Attack force and damage
+    [SerializeField] private float attackForce = 5f;
+    [SerializeField] private int attackDamage = 1;
 
-    [Header("Swing Settings")]
-    public Direction swingDirection = Direction.Right;
-    public KeyCode swingKey = KeyCode.Mouse0;
-    public KeyCode leftKey = KeyCode.A;
-    public KeyCode rightKey = KeyCode.D;
-    public KeyCode upKey = KeyCode.W;
-    public KeyCode downKey = KeyCode.S;
-    public float swingDuration = 0.25f;
-    public bool resetToInitialPoseAfterSwing = true;
+    // Hitbox GameObjects
+    [SerializeField] private GameObject sideHitbox;
+    [SerializeField] private GameObject upHitbox;
+    [SerializeField] private GameObject downHitbox;
 
-    private Vector3 initialLocalPos;
-    private Quaternion initialLocalRot;
-    private bool isSwinging = false;
-    private Coroutine currentSwingCoroutine;
+    // Layer masks
+    [SerializeField] private LayerMask enemyLayers;
 
-    void Awake()
+    private Direction direction;
+    private enum Direction { Left, Right, Up, Down }
+
+    private void Start()
     {
-        initialLocalPos = transform.localPosition;
-        initialLocalRot = transform.localRotation;
+        rb = GetComponent<Rigidbody2D>();
 
-        Debug.Log("StickAttack initialized");
-        ApplyDistanceAdjustments();
+        playerAnimator = GetComponent<Animator>();
+        plrMovement = GetComponent<PlayerMovement>();
+
+
+
     }
 
-    void Update()
+    private void Update()
     {
-        UpdateSwingDirection();
+        GetDirection();
+        GetInput();
 
-        if (!isSwinging && Input.GetKeyDown(swingKey))
+        slashObj.SetActive(attacking);
+    }
+
+    private void FixedUpdate()
+    {
+        UpdateAnimation();
+    }
+
+    void GetDirection()
+    {
+        if (!attacking)
         {
-            if (currentSwingCoroutine != null)
-                StopCoroutine(currentSwingCoroutine);
-
-            currentSwingCoroutine = StartCoroutine(DoSwing(swingDirection));
+            if (Input.GetKey(leftKey)) direction = Direction.Left;
+            else if (Input.GetKey(rightKey)) direction = Direction.Right;
+            else if (Input.GetKey(upKey)) direction = Direction.Up;
+            else if (Input.GetKey(downKey)) direction = Direction.Down;
         }
     }
 
-    private void UpdateSwingDirection()
+    void GetInput()
     {
-        if (!isSwinging)
+        if (Input.GetKeyDown(attackKey) && !plrMovement.IsDashing() && !plrMovement.IsWallSliding() && !plrMovement.IsQuickDropping() && canAttack)
         {
-            if (Input.GetKey(leftKey))
+            StartAttack();
+        }
+    }
+
+    void StartAttack()
+    {
+        attacking = true;
+        canAttack = false;
+
+        playerAnimator.SetInteger(AttackDirectionHash, (int)direction);
+
+        
+
+
+
+        slashCombo = slashCombo == 1 ? 2 : 1;
+
+        StartCoroutine(AttackDuration());
+        StartCoroutine(AttackCooldown());
+    }
+
+    IEnumerator AttackDuration()
+    {
+        yield return new WaitForSeconds(attackDuration);
+        attacking = false;
+  
+    }
+
+    IEnumerator AttackCooldown()
+    {
+        yield return new WaitForSeconds(attackCooldown);
+        canAttack = true;
+    }
+
+    
+
+   
+
+    
+
+    public void OnHitboxTriggerEnter(Collider2D other)
+    {
+        if (((1 << other.gameObject.layer) & enemyLayers) != 0)
+        {
+            HealthModule enemyHealth = other.GetComponent<HealthModule>();
+            if (enemyHealth != null)
             {
-                swingDirection = Direction.Left;
-            }
-            else if (Input.GetKey(rightKey))
-            {
-                swingDirection = Direction.Right;
-            }
-            else if (Input.GetKey(upKey))
-            {
-                swingDirection = Direction.Up;
-            }
-            else if (Input.GetKey(downKey))
-            {
-                swingDirection = Direction.Down;
+                enemyHealth.TakeDamage(attackDamage);
+
+                Rigidbody2D enemyRb = other.GetComponent<Rigidbody2D>();
+                if (enemyRb != null)
+                {
+                    ApplyKnockback(enemyRb);
+                }
             }
         }
     }
 
-    public IEnumerator DoSwing(Direction direction)
+    void ApplyKnockback(Rigidbody2D enemyRb)
     {
-        isSwinging = true;
-
-        Debug.Log("Starting swing in direction: " + direction);
-
-        (Vector3 localPos, Quaternion localRot) = GetPoseForDirection(direction);
-
-        transform.localPosition = localPos;
-        transform.localRotation = localRot;
-
-        Debug.Log("Swing position - Local: " + localPos + ", World: " + transform.position);
-
-        SpawnEffectAtLocalPose(localPos, localRot);
-
-        yield return new WaitForSeconds(swingDuration);
-
-        if (resetToInitialPoseAfterSwing)
+        if (enemyRb != null)
         {
-            transform.localPosition = initialLocalPos;
-            transform.localRotation = initialLocalRot;
-        }
-
-        isSwinging = false;
-        currentSwingCoroutine = null;
-    }
-
-    private (Vector3, Quaternion) GetPoseForDirection(Direction dir)
-    {
-        switch (dir)
-        {
-            case Direction.Up:
-                return (upPosition, Quaternion.Euler(upRotation));
-            case Direction.Right:
-                return (rightPosition, Quaternion.Euler(rightRotation));
-            case Direction.Left:
-                return (leftPosition, Quaternion.Euler(leftRotation));
-            case Direction.Down:
-                return (downPosition, Quaternion.Euler(downRotation));
-            default:
-                return (initialLocalPos, initialLocalRot);
+            Vector2 knockbackDirection = GetKnockbackDirection();
+            enemyRb.AddForce(knockbackDirection * attackForce, ForceMode2D.Impulse);
         }
     }
 
-    private void SpawnEffectAtLocalPose(Vector3 localPos, Quaternion localRot)
+    Vector2 GetKnockbackDirection()
     {
-        if (swingEffectPrefab == null)
+        switch (direction)
         {
-            Debug.LogWarning("Swing effect prefab is not assigned!");
-            return;
-        }
-
-        try
-        {
-            if (transform.parent == null)
-            {
-                Debug.LogError("Stick has no parent! Cannot calculate world position properly.");
-                return;
-            }
-
-            Vector3 worldPos = transform.parent.position + localPos;
-
-            Quaternion worldRot = transform.parent.rotation * localRot;
-
-            ParticleSystem ps = Instantiate(swingEffectPrefab, worldPos, worldRot, transform.parent);
-
-            ps.Play();
-
-            float lifetime = ps.main.duration + ps.main.startLifetime.constantMax;
-            Destroy(ps.gameObject, lifetime);
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError("Error spawning particle effect: " + e.Message);
+            case Direction.Left: return Vector2.left;
+            case Direction.Right: return Vector2.right;
+            case Direction.Up: return Vector2.up;
+            case Direction.Down: return Vector2.down;
+            default: return Vector2.right;
         }
     }
 
-    private void ApplyDistanceAdjustments()
-    { 
-        rightPosition = new Vector3(horizontalDistance, rightPosition.y, rightPosition.z);
-        leftPosition = new Vector3(-horizontalDistance, leftPosition.y, leftPosition.z);
-
-        upPosition = new Vector3(centerX, verticalDistance, upPosition.z);
-        downPosition = new Vector3(centerX, -verticalDistance, downPosition.z);
-    }
-
-    public void AutoAdjustPositions()
+    void UpdateAnimation()
     {
-        ApplyDistanceAdjustments();
-        Debug.Log("Positions adjusted");
-        PrintCurrentPositions();
+
+        slashAnimator.SetInteger(SlashComboHash, slashCombo);
+        playerAnimator.SetBool(StartAttackHash, attacking);
+        slashAnimator.SetBool(StartAttackHash, attacking);
     }
 
-    [ContextMenu("Print Current Positions")]
-    public void PrintCurrentPositions()
-    {
-        Debug.Log("=== CURRENT POSITIONS ===");
-        Debug.Log("Right: " + rightPosition);
-        Debug.Log("Left: " + leftPosition);
-        Debug.Log("Up: " + upPosition);
-        Debug.Log("Down: " + downPosition);
-    }
+    public bool IsAttacking() => attacking;
+  
 
-    [ContextMenu("Center Up/Down Attacks")]
-    public void CenterUpDownAttacks()
-    {
-        centerX = 0f;
-        ApplyDistanceAdjustments();
-        Debug.Log("Up/Down attacks centered on X-axis");
-    }
+    public bool CanAttack() => canAttack;
+    
 
-    public void TriggerSwing(Direction direction = Direction.Right)
-    {
-        if (!isSwinging)
-        {
-            if (currentSwingCoroutine != null)
-                StopCoroutine(currentSwingCoroutine);
-
-            currentSwingCoroutine = StartCoroutine(DoSwing(direction));
-        }
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (transform.parent == null) return;
-
-        if (!Application.isPlaying)
-        {
-            ApplyDistanceAdjustments();
-        }
-
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.parent.position + upPosition, 0.2f);
-        Gizmos.DrawLine(transform.parent.position, transform.parent.position + upPosition);
-
-        Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(transform.parent.position + rightPosition, 0.2f);
-        Gizmos.DrawLine(transform.parent.position, transform.parent.position + rightPosition);
-
-        Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.parent.position + leftPosition, 0.2f);
-        Gizmos.DrawLine(transform.parent.position, transform.parent.position + leftPosition);
-
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.parent.position + downPosition, 0.2f);
-        Gizmos.DrawLine(transform.parent.position, transform.parent.position + downPosition);
-    }
+    public string GetCurrentDirectionAsString() => direction.ToString();
+    
 }

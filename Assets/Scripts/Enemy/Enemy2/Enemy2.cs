@@ -206,6 +206,36 @@ public class AntlionLarva : MonoBehaviour
         isAttacking = true;
         hasHitPlayer = false;
 
+        bool attackStraight = true;
+        if (cachedTarget != null)
+        {
+            float distance = Vector2.Distance(transform.position, cachedTarget.transform.position);
+           
+            if (distance < 2f)
+            {
+                attackStraight = false;
+            }
+        }
+
+        float windUpTime = 0.5f;
+        rb.linearVelocity = Vector2.zero;
+        if (spriteRenderer != null)
+        {
+            Color original = spriteRenderer.color;
+            spriteRenderer.color = Color.yellow;
+            yield return new WaitForSeconds(windUpTime);
+            spriteRenderer.color = original;
+        }
+        else
+        {
+            yield return new WaitForSeconds(windUpTime);
+        }
+
+        if (!attackStraight)
+        {
+            yield return StartCoroutine(JumpBackFromPlayer());
+        }
+
         float undergroundStartTime = Time.time;
         yield return StartCoroutine(BurrowUnderground());
 
@@ -220,7 +250,6 @@ public class AntlionLarva : MonoBehaviour
         isAttacking = false;
         cachedTarget = null;
     }
-
     private IEnumerator BurrowUnderground()
     {
         surfacePosition = transform.position;
@@ -261,28 +290,27 @@ public class AntlionLarva : MonoBehaviour
     {
         float startTime = Time.time;
 
-        Vector3 targetPos;
-        if (cachedTarget != null)
-        {
-            Vector3 dirToPlayer = (cachedTarget.transform.position - transform.position).normalized;
-            targetPos = cachedTarget.transform.position - dirToPlayer * behindOffset;
-        }
-        else
-        {
-            targetPos = transform.position + Vector3.right * 1f;
-        }
-
-        Vector3 startPos = transform.position;
-
         while (Time.time - startTime < movementDuration)
         {
-            float t = (Time.time - startTime) / movementDuration;
-            transform.position = Vector3.Lerp(startPos, targetPos - new Vector3(0, burrowDepth, 0), t);
+            if (cachedTarget != null)
+            {
+                Vector3 dirToPlayer = (cachedTarget.transform.position - transform.position).normalized;
+                Vector3 targetPos = cachedTarget.transform.position - dirToPlayer * behindOffset;
+                targetPos.y = surfacePosition.y - burrowDepth; 
+
+                transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * burrowSpeed);
+            }
+
             yield return null;
         }
 
-        transform.position = new Vector3(targetPos.x, transform.position.y, transform.position.z);
-        surfacePosition = new Vector3(targetPos.x, surfacePosition.y, targetPos.z);
+        if (cachedTarget != null)
+        {
+            Vector3 dirToPlayer = (cachedTarget.transform.position - transform.position).normalized;
+            Vector3 finalPos = cachedTarget.transform.position - dirToPlayer * behindOffset;
+            transform.position = new Vector3(finalPos.x, surfacePosition.y - burrowDepth, finalPos.z);
+            surfacePosition = new Vector3(finalPos.x, surfacePosition.y, finalPos.z);
+        }
     }
 
     private IEnumerator EmergeFromGround()

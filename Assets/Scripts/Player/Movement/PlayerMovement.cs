@@ -16,11 +16,15 @@ public class PlayerMovement : MonoBehaviour
     private static readonly int IsQuickDroppingHash = Animator.StringToHash("IsQuickDropping");
     private static readonly int VerticalVelocityHash = Animator.StringToHash("VerticalVelocity");
     private static readonly int IsLookingUpHash = Animator.StringToHash("isLookingUp");
+    private static readonly int IsFallingHash = Animator.StringToHash("IsFalling");
+    private static readonly int IsJumpingHash = Animator.StringToHash("IsJumping");
 
     [Header("Movement State")]
     private float horizontalInput;
     private bool facingRight = true;
     private bool isGrounded;
+    private bool isFalling;
+    private bool isJumping;
     private int airJumpsRemaining;
 
     [Header("Jump State")]
@@ -131,6 +135,8 @@ public class PlayerMovement : MonoBehaviour
     {
         GetInput();
         CheckGrounded();
+        CheckFalling();
+        CheckJumping();
         HandleJump();
         HandleQuickDrop();
         UpdateTimers();
@@ -182,6 +188,15 @@ public class PlayerMovement : MonoBehaviour
             if (resetDashOnGround) canDash = true;
         }
         else { coyoteTimeCounter -= Time.deltaTime; }
+    }
+
+    private void CheckFalling()
+    {
+        isFalling = !isGrounded && !isWallSliding && !isDashing && !isQuickDropping && rb.linearVelocity.y < 0.1f;
+    }
+    private void CheckJumping()
+    {
+        isJumping = !isGrounded && !isWallSliding && !isDashing && !isQuickDropping && rb.linearVelocity.y > 0.1f;
     }
 
     private void OnLanded() { if (isQuickDropping) StopQuickDrop(); }
@@ -305,8 +320,8 @@ public class PlayerMovement : MonoBehaviour
         float targetSpeed = Mathf.Lerp(normalizedSpeed, inputInfluence, 0.3f);
 
         float currentSmoothSpeed = (targetSpeed < currentAnimSpeed) ?
-            animationSmoothSpeed * 2f : 
-            animationSmoothSpeed;       
+            animationSmoothSpeed * 2f :
+            animationSmoothSpeed;
 
         currentAnimSpeed = Mathf.Lerp(currentAnimSpeed, targetSpeed, currentSmoothSpeed * Time.deltaTime);
 
@@ -315,10 +330,14 @@ public class PlayerMovement : MonoBehaviour
         animator.SetBool(IsWallSlidingHash, isWallSliding);
         animator.SetBool(IsDashingHash, isDashing);
         animator.SetBool(IsQuickDroppingHash, isQuickDropping);
+        animator.SetBool(IsFallingHash, isFalling);
+        animator.SetBool(IsJumpingHash, isJumping); 
         animator.SetFloat(VerticalVelocityHash, rb.linearVelocity.y);
     }
 
     public bool IsGrounded() => isGrounded;
+    public bool IsFalling() => isFalling;
+    public bool IsJumping() => isJumping;
     public bool IsDashing() => isDashing;
     public bool IsWallSliding() => isWallSliding;
     public bool IsQuickDropping() => isQuickDropping;
