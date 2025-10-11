@@ -11,6 +11,10 @@ public class AttackHitbox : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        
+
+        if (other.GetComponent<AttackHitbox>() != null) return;
+
         if (stickAttack != null && stickAttack.IsAttacking())
         {
             stickAttack.OnHitboxTriggerEnter(other);

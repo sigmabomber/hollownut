@@ -114,7 +114,8 @@ public class CameraController : MonoBehaviour
   
     public static void ToggleFollow(bool follow)
     {
-        CameraController[] cameras = FindObjectsOfType<CameraController>();
+        CameraController[] cameras = FindObjectsByType<CameraController>(FindObjectsSortMode.None);
+
         foreach (CameraController cam in cameras)
         {
             cam.enableVerticalFollow = follow;

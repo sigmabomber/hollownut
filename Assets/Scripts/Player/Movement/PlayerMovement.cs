@@ -42,7 +42,6 @@ public class PlayerMovement : MonoBehaviour
     private bool isOnWall;
     private bool isWallSliding;
     private int wallDirection;
-    private float wallStickCounter;
 
     [Header("Quick Drop State")]
     private bool quickDropPressed;
@@ -75,10 +74,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private bool resetDashOnGround = true;
 
     [Header("Wall Settings")]
-    [SerializeField] private float wallSlideSpeed = 2.5f;
     [SerializeField] private float wallJumpForce = 18f;
     [SerializeField] private Vector2 wallJumpAngle = new(1.2f, 1.8f);
-    [SerializeField] private float wallStickTime = 0.15f;
     [SerializeField] private float wallJumpLockTime = 0.1f;
 
     [Header("Quick Drop Settings")]
@@ -95,6 +92,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Wall Detection")]
     [SerializeField] private float wallCheckDistance = 0.5f;
+    [SerializeField] private Vector2 wallCheckOffset = new(0.3f, 0f);
+    [SerializeField] private float wallCheckHeight = 0.8f;
 
     [Header("Animation Settings")]
     [SerializeField] private float animationSmoothSpeed = 15f;
@@ -147,7 +146,9 @@ public class PlayerMovement : MonoBehaviour
     {
         if (isDashing) return;
         if (isQuickDropping) { ApplyQuickDrop(); return; }
-        if (isWallSliding) { HandleWallSlide(); } else { HandleMovement(); }
+
+        // Completely removed wall sliding from movement handling
+        HandleMovement();
         ApplyFallPhysics();
         HandleFacingDirection();
     }
@@ -190,10 +191,47 @@ public class PlayerMovement : MonoBehaviour
         else { coyoteTimeCounter -= Time.deltaTime; }
     }
 
+    private void CheckWalls()
+    {
+        // Reset wall states
+        bool wasOnWall = isOnWall;
+        isOnWall = false;
+        isWallSliding = false;
+        wallDirection = 0;
+
+        // Only check for walls if not grounded and moving toward a wall
+        if (!isGrounded && horizontalInput != 0)
+        {
+            Vector2 checkDirection = Vector2.right * Mathf.Sign(horizontalInput);
+            Vector2 checkOrigin = (Vector2)transform.position + new Vector2(wallCheckOffset.x * checkDirection.x, 0);
+
+            // Check for wall at different heights
+            RaycastHit2D hit1 = Physics2D.Raycast(checkOrigin, checkDirection, wallCheckDistance, groundLayer);
+            RaycastHit2D hit2 = Physics2D.Raycast(checkOrigin + Vector2.up * wallCheckHeight * 0.5f, checkDirection, wallCheckDistance, groundLayer);
+            RaycastHit2D hit3 = Physics2D.Raycast(checkOrigin + Vector2.up * wallCheckHeight, checkDirection, wallCheckDistance, groundLayer);
+
+            isOnWall = hit1.collider != null || hit2.collider != null || hit3.collider != null;
+
+            if (isOnWall)
+            {
+                wallDirection = (int)Mathf.Sign(horizontalInput);
+
+                // Only allow wall jump if moving toward the wall and falling
+                if (rb.linearVelocity.y < 0)
+                {
+                    isWallSliding = true;
+                }
+            }
+        }
+
+     
+    }
+
     private void CheckFalling()
     {
         isFalling = !isGrounded && !isWallSliding && !isDashing && !isQuickDropping && rb.linearVelocity.y < 0.1f;
     }
+
     private void CheckJumping()
     {
         isJumping = !isGrounded && !isWallSliding && !isDashing && !isQuickDropping && rb.linearVelocity.y > 0.1f;
@@ -220,8 +258,6 @@ public class PlayerMovement : MonoBehaviour
     {
         if (rb.linearVelocity.y < 0) rb.linearVelocity += ((fallMultiplier - 1) * Physics2D.gravity.y * Time.fixedDeltaTime * Vector2.up) * weight;
     }
-
-    private void HandleWallSlide() { rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, -wallSlideSpeed)); }
 
     private void HandleJump()
     {
@@ -312,27 +348,61 @@ public class PlayerMovement : MonoBehaviour
     {
         if (animator == null) return;
 
+        // Calculate target animation speed
         float actualSpeed = Mathf.Abs(rb.linearVelocity.x);
         float maxSpeed = maxWalkSpeed / weight;
         float normalizedSpeed = Mathf.Clamp01(actualSpeed / maxSpeed);
         float inputInfluence = Mathf.Abs(horizontalInput);
 
+        // Blend between actual movement and input influence
         float targetSpeed = Mathf.Lerp(normalizedSpeed, inputInfluence, 0.3f);
 
-        float currentSmoothSpeed = (targetSpeed < currentAnimSpeed) ?
-            animationSmoothSpeed * 2f :
-            animationSmoothSpeed;
+        // Smoothly interpolate towards target speed
+        float smoothFactor = animationSmoothSpeed * Time.deltaTime;
 
-        currentAnimSpeed = Mathf.Lerp(currentAnimSpeed, targetSpeed, currentSmoothSpeed * Time.deltaTime);
+        // Use different smoothing when decelerating vs accelerating
+        if (targetSpeed < currentAnimSpeed)
+        {
+            smoothFactor *= 2f; // Faster deceleration
+        }
 
+        currentAnimSpeed = Mathf.Lerp(currentAnimSpeed, targetSpeed, smoothFactor);
+
+        // Snap to zero when very close to avoid floating point precision issues
+        if (currentAnimSpeed < 0.01f)
+        {
+            currentAnimSpeed = 0f;
+        }
+
+        // Set animator parameters
         animator.SetFloat(SpeedHash, currentAnimSpeed);
         animator.SetBool(IsGroundedHash, isGrounded);
         animator.SetBool(IsWallSlidingHash, isWallSliding);
         animator.SetBool(IsDashingHash, isDashing);
         animator.SetBool(IsQuickDroppingHash, isQuickDropping);
         animator.SetBool(IsFallingHash, isFalling);
-        animator.SetBool(IsJumpingHash, isJumping); 
+        animator.SetBool(IsJumpingHash, isJumping);
         animator.SetFloat(VerticalVelocityHash, rb.linearVelocity.y);
+    }
+    // Visual debugging for wall detection
+    private void OnDrawGizmosSelected()
+    {
+        // Ground check
+        Gizmos.color = isGrounded ? Color.green : Color.red;
+        Vector2 groundCastOrigin = (Vector2)transform.position + groundCheckOffset;
+        Gizmos.DrawWireCube(groundCastOrigin + Vector2.down * groundCheckDistance * 0.5f, new Vector3(groundCheckSize.x, groundCheckSize.y + groundCheckDistance, 0));
+
+        // Wall checks
+        if (Application.isPlaying)
+        {
+            Gizmos.color = isOnWall ? Color.yellow : Color.blue;
+            Vector2 wallCheckDir = Vector2.right * wallDirection;
+            Vector2 wallCheckOrigin = (Vector2)transform.position + new Vector2(wallCheckOffset.x * wallCheckDir.x, 0);
+
+            Gizmos.DrawLine(wallCheckOrigin, wallCheckOrigin + wallCheckDir * wallCheckDistance);
+            Gizmos.DrawLine(wallCheckOrigin + Vector2.up * wallCheckHeight * 0.5f, wallCheckOrigin + Vector2.up * wallCheckHeight * 0.5f + wallCheckDir * wallCheckDistance);
+            Gizmos.DrawLine(wallCheckOrigin + Vector2.up * wallCheckHeight, wallCheckOrigin + Vector2.up * wallCheckHeight + wallCheckDir * wallCheckDistance);
+        }
     }
 
     public bool IsGrounded() => isGrounded;

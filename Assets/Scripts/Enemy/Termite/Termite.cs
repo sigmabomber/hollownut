@@ -239,7 +239,8 @@ public class Termite : MonoBehaviour
 
     private void Jump(Vector2 force)
     {
-        rb.isKinematic = false;
+        rb.bodyType = RigidbodyType2D.Dynamic;
+
         rb.linearVelocity = Vector2.zero;
         rb.AddForce(force, ForceMode2D.Impulse);
     }
@@ -296,7 +297,7 @@ public class Termite : MonoBehaviour
         {
             rb.linearVelocity = Vector2.zero;
             rb.angularVelocity = 0f;
-            rb.isKinematic = true;
+            rb.bodyType = RigidbodyType2D.Kinematic;
         }
 
         if (boxCollider != null)
@@ -322,7 +323,7 @@ public class Termite : MonoBehaviour
 
         if (rb != null)
         {
-            rb.isKinematic = false;
+            rb.bodyType = RigidbodyType2D.Dynamic;
             Vector2 jumpOffDir = GetAvoidanceDirection();
             rb.AddForce(jumpOffDir * (jumpForce * 0.6f), ForceMode2D.Impulse);
         }

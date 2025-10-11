@@ -6,7 +6,7 @@ public class CameraZone : MonoBehaviour
     public Vector2 maxBounds;
 
 
-    public Transform camera;
+    public new Transform camera;
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
@@ -25,14 +25,11 @@ public class CameraZone : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        print(collision.gameObject.name);
         CameraController cam = camera.GetComponent<CameraController>();
 
         if (cam == null)
-            print("null");
         if (cam != null && collision.CompareTag("Player"))
         {
-            print("setting zone");
             cam.SetZone(this);
         }
     }

@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class HealthModule : MonoBehaviour
 {
-
+    
     public float currentHealth;
     protected float maxHealth;
 
@@ -11,6 +11,7 @@ public class HealthModule : MonoBehaviour
     public Action<float, float> onHealthChanged;
     public Action onDeath;
 
+    public bool invincible = false;
 
     // Setup the system
     public virtual void Initialize(float health = 67)
@@ -25,6 +26,7 @@ public class HealthModule : MonoBehaviour
     // Takes damage
     public virtual void TakeDamage(float amount)
     {
+        if (invincible) return;
         if (amount <= 0 || currentHealth <= 0) return;
 
         currentHealth -= amount;
@@ -50,5 +52,8 @@ public class HealthModule : MonoBehaviour
     {
         onDeath?.Invoke();
     }
+
+
+    public bool CanBeHit() => !invincible;
 
 }

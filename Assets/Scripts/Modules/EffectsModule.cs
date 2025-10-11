@@ -2,7 +2,6 @@ using UnityEngine;
 
 
 
-// Movement
 
 
 public interface SlowedDown
@@ -40,15 +39,21 @@ public struct KnockbackData
 {
     public Vector2 Direction;
     public float Force;
-    public float Duration;
+    public Rigidbody2D Target;
+
+    public KnockbackData(Vector2 direction, float force, Rigidbody2D target)
+    {
+        Direction = direction;
+        Force = force;
+        Target = target;
+    }
 }
 
 public interface IKnockback
 {
-
+    void KnockBack(KnockbackData data);
 }
 
-// Status
 
 public interface OnFire
 {
@@ -80,10 +85,18 @@ public class EffectsModule : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    public void SlowedDown(SlowedDownData data)
+
+    public void KnockBack(KnockbackData data)
     {
 
-        print("slow");
+        Vector2 knockbackDirection = data.Direction;
+        Rigidbody2D targetRb = data.Target;
+
+        targetRb.AddForce(knockbackDirection * data.Force, ForceMode2D.Impulse);
+    }
+
+    public void SlowedDown(SlowedDownData data)
+    {
         Rigidbody2D target = data.Target;
         if (target == null) {print("hsfaed"); return; }
         PlayerMovement playerMovement = target.GetComponent<PlayerMovement>();
@@ -98,7 +111,6 @@ public class EffectsModule : MonoBehaviour
 
     public void UndoSlow( SlowedDownData data)
     {
-        print("unslow");
         Rigidbody2D target = data.Target;
         if (target == null) { print("ggd"); return; }
         PlayerMovement playerMovement = target.GetComponent<PlayerMovement>();
