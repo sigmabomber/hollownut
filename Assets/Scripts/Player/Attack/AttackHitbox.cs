@@ -17,7 +17,7 @@ public class AttackHitbox : MonoBehaviour
 
         if (stickAttack != null && stickAttack.IsAttacking())
         {
-            stickAttack.OnHitboxTriggerEnter(other);
+            //stickAttack.OnHitboxTriggerEnter(other);
         }
     }
 }

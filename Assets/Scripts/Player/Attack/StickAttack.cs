@@ -14,13 +14,12 @@ public class StickAttack : MonoBehaviour
     private Animator playerAnimator;
     public Animator slashAnimator;
     public GameObject slashObj;
-    // Animation hashes
+
     private static readonly int StartAttackHash = Animator.StringToHash("StartAttack");
     private static readonly int AttackDirectionHash = Animator.StringToHash("SlashDirection");
-    private static readonly int SlashComboHash = Animator.StringToHash("SlashCombo");
+    private static readonly int JumpingHash = Animator.StringToHash("Jumping");
 
-
-    // Attack parameters
+    private bool jumping = false;
     private bool canAttack = true;
     private bool attacking = false;
     [SerializeField] private float attackCooldown = 0.4f;
@@ -29,23 +28,20 @@ public class StickAttack : MonoBehaviour
     [SerializeField] private GameObject attackHitEnemyVFX;
     [SerializeField] private GameObject attackHitNonEnemyVFX;
 
-    // Attack force and damage
-    [SerializeField] private float attackForce = 5f;
-    [SerializeField] private int attackDamage = 1;
+    [SerializeField] private float attackForce = 50f;
+    [SerializeField] private int attackDamage = 10;
 
-    // Hitbox GameObjects
-    [SerializeField] private GameObject sideHitbox;
-    [SerializeField] private GameObject upHitbox;
-    [SerializeField] private GameObject downHitbox;
+    [SerializeField] private float attackRange = 1.5f;
+    [SerializeField] private float attackWidth = 1.2f;
+    [SerializeField] private float attackHeight = 0.8f;
+    [SerializeField] private int numberOfRays = 5;
 
-    // Layer masks
     [SerializeField] private LayerMask enemyLayers;
+    [SerializeField] private LayerMask obstacleLayers;
 
     private Direction direction;
     private enum Direction { Left, Right, Up, Down }
 
-    // Track only one hit per attack with priority
-    private Collider2D primaryHitThisAttack;
     private bool hasHitThisAttack = false;
 
     private void Start()
@@ -53,17 +49,12 @@ public class StickAttack : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         playerAnimator = GetComponent<Animator>();
         plrMovement = GetComponent<PlayerMovement>();
-
-        // Deactivate all hitboxes at start
-        DeactivateAllHitboxes();
     }
-
 
     private void Update()
     {
         GetDirection();
         GetInput();
-
         slashObj.SetActive(attacking);
     }
 
@@ -91,87 +82,77 @@ public class StickAttack : MonoBehaviour
         }
     }
 
-
     void StartAttack()
     {
         attacking = true;
         canAttack = false;
         hasHitThisAttack = false;
-        primaryHitThisAttack = null;
-
-        // Activate the appropriate hitbox based on direction
-        ActivateHitboxBasedOnDirection();
-
+        jumping = plrMovement.IsJumping();
+        DetectHits();
         StartCoroutine(AttackDuration());
         StartCoroutine(AttackCooldown());
     }
 
-    void ActivateHitboxBasedOnDirection()
+    void DetectHits()
     {
-        // Deactivate all hitboxes first
-        DeactivateAllHitboxes();
+        Vector2 attackOrigin = GetAttackOrigin();
+        Vector2 attackSize = GetAttackSize();
+        Vector2 attackDirection = GetAttackDirectionVector();
+        RaycastHit2D[] boxHits = Physics2D.BoxCastAll(attackOrigin, attackSize, 0f, attackDirection, 0.1f, enemyLayers | obstacleLayers);
+        RaycastHit2D[] rayHits = PerformMultiRaycast(attackOrigin, attackSize, attackDirection);
+        ProcessHits(boxHits);
+        ProcessHits(rayHits);
+    }
 
-        // Activate only the relevant hitbox based on direction
-        switch (direction)
+    RaycastHit2D[] PerformMultiRaycast(Vector2 origin, Vector2 size, Vector2 direction)
+    {
+        System.Collections.Generic.List<RaycastHit2D> allHits = new System.Collections.Generic.List<RaycastHit2D>();
+        float spacing;
+        Vector2 perpendicular;
+
+        if (direction == Vector2.left || direction == Vector2.right)
         {
-            case Direction.Left:
-            case Direction.Right:
-                // Directions 0 (Left) and 1 (Right) use side hitbox
-                if (sideHitbox != null) sideHitbox.SetActive(true);
-                break;
-            case Direction.Up:
-                // Direction 2 (Up) uses up hitbox
-                if (upHitbox != null) upHitbox.SetActive(true);
-                break;
-            case Direction.Down:
-                // Direction 3 (Down) uses down hitbox
-                if (downHitbox != null) downHitbox.SetActive(true);
-                break;
+            spacing = size.y / (numberOfRays - 1);
+            perpendicular = Vector2.up;
         }
+        else
+        {
+            spacing = size.x / (numberOfRays - 1);
+            perpendicular = Vector2.right;
+        }
+
+        for (int i = 0; i < numberOfRays; i++)
+        {
+            Vector2 rayOrigin = origin + perpendicular * (i * spacing - size.y / 2);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, direction, attackRange, enemyLayers | obstacleLayers);
+            allHits.AddRange(hits);
+            Debug.DrawRay(rayOrigin, direction * attackRange, Color.red, 1f);
+        }
+
+        return allHits.ToArray();
     }
 
-    void DeactivateAllHitboxes()
+    void ProcessHits(RaycastHit2D[] hits)
     {
-        if (sideHitbox != null) sideHitbox.SetActive(false);
-        if (upHitbox != null) upHitbox.SetActive(false);
-        if (downHitbox != null) downHitbox.SetActive(false);
-    }
-
-    IEnumerator AttackDuration()
-    {
-        yield return new WaitForSeconds(attackDuration);
-        attacking = false;
-
-        DeactivateAllHitboxes();
-    }
-
-    IEnumerator AttackCooldown()
-    {
-        yield return new WaitForSeconds(attackCooldown);
-        canAttack = true;
-    }
-
-    public void OnHitboxTriggerEnter(Collider2D other)
-    {
-        // Skip if we've already processed a hit this attack
         if (hasHitThisAttack) return;
 
-        // Skip player layer
-        int playerLayer = LayerMask.NameToLayer("Player");
-        int ignoreLayer = LayerMask.NameToLayer("Ignore");
-        if (other.gameObject.layer == playerLayer) return;
-        if (other.gameObject.layer == ignoreLayer) return;
-
-        bool isEnemy = ((1 << other.gameObject.layer) & enemyLayers) != 0;
-
-        // Priority system: If we haven't hit anything yet, OR if this is an enemy and our current hit isn't
-        if (!hasHitThisAttack || (isEnemy && primaryHitThisAttack != null && !IsEnemy(primaryHitThisAttack)))
+        foreach (RaycastHit2D hit in hits)
         {
-            ProcessHit(other, isEnemy);
+            if (hit.collider != null && !hasHitThisAttack)
+            {
+                int playerLayer = LayerMask.NameToLayer("Player");
+                int ignoreLayer = LayerMask.NameToLayer("Ignore");
+                if (hit.collider.gameObject.layer == playerLayer) continue;
+                if (hit.collider.gameObject.layer == ignoreLayer) continue;
+
+                bool isEnemy = ((1 << hit.collider.gameObject.layer) & enemyLayers) != 0;
+                ProcessHit(hit.collider, hit.point, isEnemy);
+                if (hasHitThisAttack) break;
+            }
         }
     }
 
-    void ProcessHit(Collider2D other, bool isEnemy)
+    void ProcessHit(Collider2D other, Vector2 hitPoint, bool isEnemy)
     {
         HealthModule enemyHealth = null;
         if (isEnemy)
@@ -179,62 +160,71 @@ public class StickAttack : MonoBehaviour
             enemyHealth = other.GetComponent<HealthModule>();
         }
 
-        // Only check CanBeHit if this is an enemy with a HealthModule
-        if (isEnemy && (enemyHealth == null || !enemyHealth.CanBeHit()))
+        if (isEnemy && (enemyHealth == null))
             return;
 
         hasHitThisAttack = true;
-        primaryHitThisAttack = other;
+        PlayHitVFX(hitPoint, isEnemy);
 
-        // Get the contact point between hitbox and enemy for accurate VFX placement
-        Vector2 contactPoint = GetContactPoint(other);
-
-        PlayHitVFX(contactPoint, isEnemy);
-
-        // Only process damage and knockback for enemies
         if (isEnemy && enemyHealth != null)
         {
             enemyHealth.TakeDamage(attackDamage);
-
             Rigidbody2D enemyRb = other.GetComponent<Rigidbody2D>();
             if (enemyRb != null)
             {
                 ApplyKnockback(enemyRb);
             }
         }
+        else
+        {
+            print("Hit: " + other.name);
+        }
     }
 
-    bool IsEnemy(Collider2D collider)
+    Vector2 GetAttackOrigin()
     {
-        return ((1 << collider.gameObject.layer) & enemyLayers) != 0;
+        Vector2 baseOrigin = (Vector2)transform.position;
+
+        switch (direction)
+        {
+            case Direction.Left:
+                return baseOrigin + Vector2.left * (attackRange * 0.5f);
+            case Direction.Right:
+                return baseOrigin + Vector2.right * (attackRange * 0.5f);
+            case Direction.Up:
+                return baseOrigin + Vector2.up * (attackRange * 0.5f);
+            case Direction.Down:
+                return baseOrigin + Vector2.down * (attackRange * 0.5f);
+            default:
+                return baseOrigin + Vector2.right * (attackRange * 0.5f);
+        }
     }
 
-    Vector2 GetContactPoint(Collider2D other)
+    Vector2 GetAttackSize()
     {
-        // Get the active hitbox
-        GameObject activeHitbox = GetActiveHitbox();
-        if (activeHitbox == null) return other.bounds.center;
-
-        // Get the hitbox collider
-        Collider2D hitboxCollider = activeHitbox.GetComponent<Collider2D>();
-        if (hitboxCollider == null) return other.bounds.center;
-
-        // Find the closest point on the enemy to the hitbox
-        Vector2 closestPointOnEnemy = other.ClosestPoint(hitboxCollider.bounds.center);
-
-        // Find the closest point on the hitbox to that enemy point
-        Vector2 closestPointOnHitbox = hitboxCollider.ClosestPoint(closestPointOnEnemy);
-
-        // Return the midpoint between them (the contact area)
-        return (closestPointOnEnemy + closestPointOnHitbox) * 0.5f;
+        switch (direction)
+        {
+            case Direction.Left:
+            case Direction.Right:
+                return new Vector2(attackRange, attackHeight);
+            case Direction.Up:
+            case Direction.Down:
+                return new Vector2(attackWidth, attackRange);
+            default:
+                return new Vector2(attackRange, attackHeight);
+        }
     }
 
-    GameObject GetActiveHitbox()
+    Vector2 GetAttackDirectionVector()
     {
-        if (sideHitbox != null && sideHitbox.activeInHierarchy) return sideHitbox;
-        if (upHitbox != null && upHitbox.activeInHierarchy) return upHitbox;
-        if (downHitbox != null && downHitbox.activeInHierarchy) return downHitbox;
-        return null;
+        switch (direction)
+        {
+            case Direction.Left: return Vector2.left;
+            case Direction.Right: return Vector2.right;
+            case Direction.Up: return Vector2.up;
+            case Direction.Down: return Vector2.down;
+            default: return Vector2.right;
+        }
     }
 
     void PlayHitVFX(Vector2 position, bool isEnemy)
@@ -268,7 +258,6 @@ public class StickAttack : MonoBehaviour
         {
             Vector2 knockbackDirection = GetKnockbackDirection();
             EffectsModule.Instance.KnockBack(new KnockbackData(knockbackDirection, attackForce, enemyRb));
-
         }
     }
 
@@ -284,6 +273,18 @@ public class StickAttack : MonoBehaviour
         }
     }
 
+    IEnumerator AttackDuration()
+    {
+        yield return new WaitForSeconds(attackDuration);
+        attacking = false;
+    }
+
+    IEnumerator AttackCooldown()
+    {
+        yield return new WaitForSeconds(attackCooldown);
+        canAttack = true;
+    }
+
     void UpdateAnimation()
     {
         if (playerAnimator != null)
@@ -292,13 +293,23 @@ public class StickAttack : MonoBehaviour
             playerAnimator.SetInteger(AttackDirectionHash, (int)direction);
         }
 
-        if (slashAnimator != null && slashObj.activeSelf == true )
+        if (slashAnimator != null && slashObj.activeSelf == true)
         {
             slashAnimator.SetBool(StartAttackHash, attacking);
             slashAnimator.SetInteger(AttackDirectionHash, (int)direction);
+            slashAnimator.SetBool(JumpingHash, jumping);
         }
+    }
 
-
+    private void OnDrawGizmosSelected()
+    {
+        if (attacking)
+        {
+            Gizmos.color = Color.red;
+            Vector2 origin = GetAttackOrigin();
+            Vector2 size = GetAttackSize();
+            Gizmos.DrawWireCube(origin, size);
+        }
     }
 
     public bool IsAttacking() => attacking;

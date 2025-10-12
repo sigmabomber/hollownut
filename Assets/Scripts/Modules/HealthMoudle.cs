@@ -9,6 +9,7 @@ public class HealthModule : MonoBehaviour
 
 
     public Action<float, float> onHealthChanged;
+    public Action onInvincDamage;
     public Action onDeath;
 
     public bool invincible = false;
@@ -26,7 +27,11 @@ public class HealthModule : MonoBehaviour
     // Takes damage
     public virtual void TakeDamage(float amount)
     {
-        if (invincible) return;
+        if (invincible) 
+        {
+            onInvincDamage?.Invoke();
+            return;
+        }
         if (amount <= 0 || currentHealth <= 0) return;
 
         currentHealth -= amount;

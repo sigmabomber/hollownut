@@ -55,7 +55,6 @@ public class EnemyModule : MonoBehaviour
 
     private void SetupDetection()
     {
-        // Create detection collider object
         detectionColliderObject = new GameObject("DetectionCollider");
         detectionColliderObject.transform.parent = transform;
         detectionColliderObject.transform.localPosition = Vector3.zero;
@@ -64,17 +63,15 @@ public class EnemyModule : MonoBehaviour
         detectionCollider.isTrigger = true;
         detectionCollider.radius = detectionRadius;
 
-        // Set ignore layer for detection collider
         if (ignoreLayer != 0)
         {
             detectionColliderObject.layer = (int)Mathf.Log(ignoreLayer.value, 2);
         }
 
-        // Create attack collider object
         attackColliderObject = new GameObject("AttackCollider");
         attackColliderObject.transform.parent = transform;
         attackColliderObject.transform.localPosition = Vector3.zero;
-        // Set ignore layer for detection collider
+        
         if (ignoreLayer != 0)
         {
             attackColliderObject.layer = (int)Mathf.Log(ignoreLayer.value, 2);
@@ -86,27 +83,6 @@ public class EnemyModule : MonoBehaviour
         attackCollider.enabled = false;
 
        
-    }
-
-    private GameObject CreateVisual(string name, float radius, Color color)
-    {
-        GameObject circle = new GameObject(name);
-        circle.transform.parent = transform;
-        circle.transform.localPosition = Vector3.zero;
-        circle.transform.localScale = Vector3.one * radius * 2f;
-
-        // Set visual to ignore layer
-        if (ignoreLayer != 0)
-        {
-            circle.layer = (int)Mathf.Log(ignoreLayer.value, 2);
-        }
-
-        var sr = circle.AddComponent<SpriteRenderer>();
-        sr.sprite = detectionSprite;
-        sr.color = color;
-        sr.sortingOrder = 10;
-
-        return circle;
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -121,10 +97,8 @@ public class EnemyModule : MonoBehaviour
 
     private void HandleTrigger(Collider2D other)
     {
-        // Check if object is in target layer
         if ((targetLayer & (1 << other.gameObject.layer)) == 0) return;
 
-        // Determine which collider was triggered
         bool isDetectionCollider = other.IsTouching(detectionCollider);
         bool isAttackCollider = other.IsTouching(attackCollider);
 
@@ -140,19 +114,25 @@ public class EnemyModule : MonoBehaviour
         }
     }
 
+
+    public bool IsTargetInRange(Transform enemy, Transform player)
+    {
+
+        float distanceToCollision = Vector2.Distance(enemy.position, player.position);
+
+        return distanceToCollision < 1.5f;
+    }
     private void OnTriggerExit2D(Collider2D other)
     {
         if (other.gameObject == target)
         {
             target = null;
-            // Disable attack collider when target leaves detection
             attackCollider.enabled = false;
         }
     }
 
     private void Update()
     {
-        // Enable attack collider only when we have a target
         if (target != null)
         {
             attackCollider.enabled = true;

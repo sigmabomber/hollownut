@@ -3,7 +3,7 @@ using System.Collections;
 using Unity.VisualScripting;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(EnemyModule))]
-public class AntlionLarva : MonoBehaviour, IKnockback
+public class AntlionLarva : MonoBehaviour
 {
     [Header("Attack Settings")]
     public float undergroundDuration = 1.5f;
@@ -19,7 +19,6 @@ public class AntlionLarva : MonoBehaviour, IKnockback
     [Header("Burrowing Visual Settings")]
     public float landPauseDuration = 0.3f;
     public float burrowInDuration = 0.8f;
-    
 
     [Header("Movement Settings")]
     public float walkSpeed = 2f;
@@ -32,6 +31,13 @@ public class AntlionLarva : MonoBehaviour, IKnockback
     public float detectionRadius = 8f;
     public float attackRadius = 4f;
     public LayerMask targetLayer = 1 << 6;
+    public LayerMask ignoreLayer;
+
+    [Header("Attack Detection Settings")]
+    public float dashAttackWidth = 1f;
+    public float dashAttackHeight = 0.5f;
+    public int dashDetectionRays = 3;
+    public float dashDetectionDistance = 1.5f;
 
     [Header("Ground Check Settings")]
     public LayerMask groundLayer;
@@ -48,6 +54,11 @@ public class AntlionLarva : MonoBehaviour, IKnockback
     public float knockbackForce = 10f;
     public float knockbackDuration = 0.3f;
 
+    [Header("Bounce Back Settings")]
+    public float bounceBackForceX = 5f;
+    public float bounceBackForceY = 3f;
+    public float bounceRecoveryTime = 0.5f;
+
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private Collider2D enemyCollider;
@@ -60,9 +71,12 @@ public class AntlionLarva : MonoBehaviour, IKnockback
     private bool isStunned = false;
     private bool isSearchingForGround = false;
     private bool isUnderground = false;
+    private bool isJumpingBack = false;
     private bool peakOut = false;
     private bool jumpOut = false;
-
+    private bool isDead = false;
+    private Coroutine currentDashCoroutine;
+    private Coroutine currentJumpBackCoroutine;
     private GameObject cachedTarget;
     private Vector2 currentWalkDirection = Vector2.right;
     private float lastPatrolChangeTime;
@@ -80,14 +94,15 @@ public class AntlionLarva : MonoBehaviour, IKnockback
     private static readonly int BurrowHash = Animator.StringToHash("StartingBurrow");
     private static readonly int JumpOutHash = Animator.StringToHash("Jumpout");
     private static readonly int PeakOutHash = Animator.StringToHash("PeakOut");
-
+    private static readonly int DeathHash = Animator.StringToHash("Death");
 
     [Header("Damage Settings")]
     public float damagePerHit = 10f;
-    public float damageCooldown = 0.5f; 
+    public float damageCooldown = 0.5f;
 
     private bool canDamage = true;
     private float lastDamageTime;
+    private bool hasHitThisDash = false;
 
     private void Start()
     {
@@ -114,6 +129,8 @@ public class AntlionLarva : MonoBehaviour, IKnockback
 
     private void Update()
     {
+        if (isDead) return;
+        if (isJumpingBack) return;
         if (isAttacking || isDashing || isStunned || isSearchingForGround || isUnderground)
             return;
 
@@ -140,8 +157,15 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         }
     }
 
+    private void FixedUpdate()
+    {
+        UpdateAnimation();
 
-    private void FixedUpdate() => UpdateAnimation();
+        if (isDashing && !hasHitThisDash)
+        {
+            DetectDashHits();
+        }
+    }
 
     private void InitializeModules()
     {
@@ -164,16 +188,56 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         {
             healthModule.Initialize(maxHealth);
             healthModule.onHealthChanged += HandleHealthChanged;
+            healthModule.onDeath += HandleDeath;
         }
     }
 
     public void KnockBack(KnockbackData data)
     {
-        if (isStunned) return;
+        if (isStunned || isDead) return;
         if (isUnderground) ForceEmergenceFromKnockback();
 
         rb.AddForce(data.Direction * data.Force, ForceMode2D.Impulse);
         StartCoroutine(ApplyKnockbackStun());
+    }
+
+    void HandleDeath()
+    {
+        if (isDead) return;
+        isDead = true;
+
+        ResetEnemyState();
+
+        if (currentDashCoroutine != null)
+            StopCoroutine(currentDashCoroutine);
+        if (currentJumpBackCoroutine != null)
+            StopCoroutine(currentJumpBackCoroutine);
+
+        StartCoroutine(DeathSequence());
+    }
+
+    private IEnumerator DeathSequence()
+    {
+        if (!IsOnValidGround() || Mathf.Abs(rb.linearVelocity.y) > 0.1f)
+        {
+            yield return new WaitUntil(() => IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f);
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        rb.linearVelocity = Vector2.zero;
+        rb.bodyType = RigidbodyType2D.Kinematic;
+
+        if (enemyCollider != null)
+            enemyCollider.enabled = false;
+
+        if (enemyModule != null)
+            enemyModule.enabled = false;
+
+        if (animator != null)
+            animator.SetBool(DeathHash, true);
+
+        yield return new WaitForSeconds(2f);
+        Destroy(gameObject);
     }
 
     private void ForceEmergenceFromKnockback()
@@ -205,12 +269,23 @@ public class AntlionLarva : MonoBehaviour, IKnockback
 
     private void HandleHealthChanged(float currentHealth, float maxHealth)
     {
+        if (isDead) return;
+
         StartCoroutine(FlashColor(Color.red));
         if (isUnderground)
         {
-            StopAllCoroutines();
-            ForceEmergenceFromKnockback();
-            StartCoroutine(ApplyKnockbackStun());
+            if (currentDashCoroutine != null)
+            {
+                StopCoroutine(currentDashCoroutine);
+                currentDashCoroutine = null;
+            }
+
+            if (isDashing)
+            {
+                StartCoroutine(JumpBackWithRecovery());
+            }
+
+            isDashing = false;
         }
     }
 
@@ -230,6 +305,8 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         isDashing = false;
         isSearchingForGround = false;
         isUnderground = false;
+        isJumpingBack = false;
+        hasHitThisDash = false;
 
         rb.gravityScale = originalGravityScale;
         if (enemyCollider != null) enemyCollider.enabled = true;
@@ -243,6 +320,12 @@ public class AntlionLarva : MonoBehaviour, IKnockback
 
         transform.localScale = Vector3.one;
         if (healthModule != null) healthModule.invincible = false;
+
+        if (currentJumpBackCoroutine != null)
+        {
+            StopCoroutine(currentJumpBackCoroutine);
+            currentJumpBackCoroutine = null;
+        }
     }
 
     private void HandleTargetDetected(GameObject target)
@@ -253,7 +336,7 @@ public class AntlionLarva : MonoBehaviour, IKnockback
 
     private void HandleStartAttack()
     {
-        if (!isAttacking && !isStunned && !isSearchingForGround && !isUnderground && IsOnValidGround() && cachedTarget != null)
+        if (isDead || !isAttacking && !isStunned && !isSearchingForGround && !isUnderground && IsOnValidGround() && cachedTarget != null)
         {
             float distanceToPlayer = Vector3.Distance(transform.position, cachedTarget.transform.position);
             if (distanceToPlayer <= attackRadius)
@@ -332,25 +415,144 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         }
 
         if (healthModule != null)
-            healthModule.onHealthChanged -= HandleHealthChanged;
-    }
-
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-        if (!isDashing || !canDamage) return;
-
-        HealthModule playerHealth = collision.GetComponent<HealthModule>();
-        if (playerHealth != null && collision.gameObject == cachedTarget)
         {
-            playerHealth.TakeDamage(damagePerHit);
-            StartCoroutine(DamageCooldown());
+            healthModule.onHealthChanged -= HandleHealthChanged;
+            healthModule.onDeath -= HandleDeath;
         }
     }
+
+    private void DetectDashHits()
+    {
+        if (!canDamage || !isDashing || hasHitThisDash || cachedTarget == null) return;
+
+        Vector2 dashDirection = GetDashDirection();
+        Vector2 detectionOrigin = GetDashDetectionOrigin();
+        Vector2 detectionSize = GetDashDetectionSize();
+
+        RaycastHit2D[] boxHits = Physics2D.BoxCastAll(detectionOrigin, detectionSize, 0f, dashDirection, dashDetectionDistance, playerLayer);
+        RaycastHit2D[] rayHits = PerformDashRaycasts(detectionOrigin, detectionSize, dashDirection);
+
+        ProcessDashHits(boxHits);
+        ProcessDashHits(rayHits);
+    }
+
+    private RaycastHit2D[] PerformDashRaycasts(Vector2 origin, Vector2 size, Vector2 direction)
+    {
+        System.Collections.Generic.List<RaycastHit2D> allHits = new System.Collections.Generic.List<RaycastHit2D>();
+
+        float spacing = size.y / (dashDetectionRays - 1);
+        Vector2 perpendicular = Vector2.up;
+
+        for (int i = 0; i < dashDetectionRays; i++)
+        {
+            Vector2 rayOrigin = origin + perpendicular * (i * spacing - size.y / 2);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, direction, dashDetectionDistance, playerLayer);
+            allHits.AddRange(hits);
+
+            Debug.DrawRay(rayOrigin, direction * dashDetectionDistance, Color.magenta, 0.1f);
+        }
+
+        return allHits.ToArray();
+    }
+
+    private void ProcessDashHits(RaycastHit2D[] hits)
+    {
+        if (hasHitThisDash) return;
+
+        foreach (RaycastHit2D hit in hits)
+        {
+            if (hit.collider != null && !hasHitThisDash && hit.transform.gameObject.layer != LayerMask.NameToLayer("Ignore"))
+            {
+                HealthModule playerHealth = hit.collider.GetComponent<HealthModule>();
+                if (playerHealth != null && hit.collider.gameObject == cachedTarget)
+                {
+                    ProcessDashHit(playerHealth, hit.point);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void ProcessDashHit(HealthModule playerHealth, Vector2 hitPoint)
+    {
+        playerHealth.TakeDamage(damagePerHit);
+        hasHitThisDash = true;
+        StartCoroutine(DamageCooldown());
+
+        if (currentDashCoroutine != null)
+        {
+            StopCoroutine(currentDashCoroutine);
+            currentDashCoroutine = null;
+        }
+
+        isDashing = false;
+
+        if (currentJumpBackCoroutine != null)
+            StopCoroutine(currentJumpBackCoroutine);
+        currentJumpBackCoroutine = StartCoroutine(JumpBackWithRecovery());
+    }
+
+    private Vector2 GetDashDirection()
+    {
+        if (cachedTarget == null) return Vector2.right;
+        Vector2 direction = (cachedTarget.transform.position - transform.position).normalized;
+        return new Vector2(direction.x, 0f).normalized;
+    }
+
+    private Vector2 GetDashDetectionOrigin()
+    {
+        Vector2 baseOrigin = (Vector2)transform.position;
+        Vector2 dashDirection = GetDashDirection();
+        return baseOrigin + dashDirection * (dashDetectionDistance * 0.3f);
+    }
+
+    private Vector2 GetDashDetectionSize()
+    {
+        return new Vector2(dashAttackWidth, dashAttackHeight);
+    }
+
     private IEnumerator DamageCooldown()
     {
         canDamage = false;
         yield return new WaitForSeconds(damageCooldown);
         canDamage = true;
+    }
+
+    private IEnumerator JumpBackWithRecovery()
+    {
+        isJumpingBack = true;
+        rb.gravityScale = originalGravityScale;
+        Vector2 bounceDirection = (transform.position - cachedTarget.transform.position).normalized;
+        bounceDirection = bounceDirection.normalized;
+        rb.linearVelocity = new Vector2(bounceDirection.x * bounceBackForceX, bounceBackForceY);
+
+        float recoveryTimer = 0f;
+        bool hasLanded = false;
+
+        while (recoveryTimer < bounceRecoveryTime && !hasLanded)
+        {
+            recoveryTimer += Time.deltaTime;
+
+            if (IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f)
+            {
+                hasLanded = true;
+            }
+
+            yield return null;
+        }
+
+        if (!hasLanded)
+        {
+            yield return new WaitUntil(() => IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f);
+        }
+
+        yield return new WaitForSeconds(0.1f);
+
+        rb.linearVelocity = Vector2.zero;
+        isJumpingBack = false;
+        isAttacking = false;
+
+        currentJumpBackCoroutine = null;
     }
 
     private IEnumerator PerformAttack()
@@ -369,15 +571,23 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         if (isStunned) { ResetEnemyState(); yield break; }
         yield return StartCoroutine(EmergeFromGround());
         if (isStunned) { ResetEnemyState(); yield break; }
-        yield return StartCoroutine(DashTowardTarget());
-        yield return new WaitForSeconds(0.5f);
-        isAttacking = false;
+
+        hasHitThisDash = false;
+        currentDashCoroutine = StartCoroutine(DashTowardTarget());
+        yield return currentDashCoroutine;
+        currentDashCoroutine = null;
+
+        if (!hasHitThisDash)
+        {
+            yield return new WaitForSeconds(0.5f);
+            isAttacking = false;
+        }
     }
 
     private IEnumerator BurrowUnderground()
     {
         isUnderground = true;
-        if (healthModule != null) healthModule.invincible = true;
+
         surfacePosition = transform.position;
         if (enemyCollider != null) enemyCollider.enabled = false;
         rb.gravityScale = 0;
@@ -385,7 +595,7 @@ public class AntlionLarva : MonoBehaviour, IKnockback
 
         Vector3 undergroundPos = transform.position - new Vector3(0, burrowDepth, 0);
         float elapsed = 0f;
-
+        if (healthModule != null) healthModule.invincible = true;
         while (elapsed < burrowInDuration && !isStunned)
         {
             elapsed += Time.deltaTime;
@@ -501,7 +711,6 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         jumpOut = false;
     }
 
-
     private void UpdateAnimation()
     {
         if (animator == null) return;
@@ -521,7 +730,7 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         Vector2 dashDirection = (cachedTarget.transform.position - transform.position).normalized;
         float dashEndTime = Time.time + dashDuration;
 
-        while (Time.time < dashEndTime && !isStunned)
+        while (Time.time < dashEndTime && !isStunned && isDashing)
         {
             rb.linearVelocity = dashDirection * dashSpeed;
             yield return null;
@@ -530,5 +739,19 @@ public class AntlionLarva : MonoBehaviour, IKnockback
         rb.gravityScale = currentGravity;
         rb.linearVelocity = Vector2.zero;
         isDashing = false;
+        hasHitThisDash = false;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (isDashing)
+        {
+            Gizmos.color = Color.magenta;
+            Vector2 origin = GetDashDetectionOrigin();
+            Vector2 size = GetDashDetectionSize();
+            Vector2 direction = GetDashDirection();
+
+            Gizmos.DrawWireCube(origin + direction * (dashDetectionDistance * 0.5f), size);
+        }
     }
 }

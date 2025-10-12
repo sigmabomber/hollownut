@@ -11,7 +11,6 @@ public class PlayerHealth : MonoBehaviour
     private Rigidbody2D rb;
 
 
-    // Hit freeze settings
     [SerializeField] private float hitFreezeDuration = 0.1f;
     [SerializeField] private float timeScaleDuringFreeze = 0.01f;
 
@@ -38,13 +37,10 @@ public class PlayerHealth : MonoBehaviour
         playerSprite.color = Color.white;
     }
 
-    // New method for hit freeze effect
     IEnumerator HitFreeze()
     {
-        // Freeze time
         Time.timeScale = timeScaleDuringFreeze;
 
-        // Wait for real seconds (not affected by time scale)
         yield return new WaitForSecondsRealtime(hitFreezeDuration);
 
         // Restore normal time
@@ -59,14 +55,12 @@ public class PlayerHealth : MonoBehaviour
         {
             Debug.Log("Player has taken damage!");
 
-            // Start both effects
             StartCoroutine(FlashColor(Color.red));
-            StartCoroutine(HitFreeze()); // Add the hit freeze
+            StartCoroutine(HitFreeze()); 
 
             if (gameObject.TryGetComponent(out IKnockback knockbackable))
             {
                 Vector2 knockbackDir = new Vector2(-transform.localScale.x, 0f);
-                // knockbackable.ApplyKnockback(new KnockbackData(knockbackDir, 100f, 0.1f));
             }
         }
         else

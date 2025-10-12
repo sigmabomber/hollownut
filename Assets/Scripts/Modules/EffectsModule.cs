@@ -98,7 +98,7 @@ public class EffectsModule : MonoBehaviour
     public void SlowedDown(SlowedDownData data)
     {
         Rigidbody2D target = data.Target;
-        if (target == null) {print("hsfaed"); return; }
+        if (target == null) { return; }
         PlayerMovement playerMovement = target.GetComponent<PlayerMovement>();
         if (playerMovement == null) { print("not very sigma2"); return; }
 

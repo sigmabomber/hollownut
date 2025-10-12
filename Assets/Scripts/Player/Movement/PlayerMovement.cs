@@ -147,7 +147,6 @@ public class PlayerMovement : MonoBehaviour
         if (isDashing) return;
         if (isQuickDropping) { ApplyQuickDrop(); return; }
 
-        // Completely removed wall sliding from movement handling
         HandleMovement();
         ApplyFallPhysics();
         HandleFacingDirection();
@@ -193,19 +192,16 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckWalls()
     {
-        // Reset wall states
         bool wasOnWall = isOnWall;
         isOnWall = false;
         isWallSliding = false;
         wallDirection = 0;
 
-        // Only check for walls if not grounded and moving toward a wall
         if (!isGrounded && horizontalInput != 0)
         {
             Vector2 checkDirection = Vector2.right * Mathf.Sign(horizontalInput);
             Vector2 checkOrigin = (Vector2)transform.position + new Vector2(wallCheckOffset.x * checkDirection.x, 0);
 
-            // Check for wall at different heights
             RaycastHit2D hit1 = Physics2D.Raycast(checkOrigin, checkDirection, wallCheckDistance, groundLayer);
             RaycastHit2D hit2 = Physics2D.Raycast(checkOrigin + Vector2.up * wallCheckHeight * 0.5f, checkDirection, wallCheckDistance, groundLayer);
             RaycastHit2D hit3 = Physics2D.Raycast(checkOrigin + Vector2.up * wallCheckHeight, checkDirection, wallCheckDistance, groundLayer);
@@ -216,15 +212,12 @@ public class PlayerMovement : MonoBehaviour
             {
                 wallDirection = (int)Mathf.Sign(horizontalInput);
 
-                // Only allow wall jump if moving toward the wall and falling
                 if (rb.linearVelocity.y < 0)
                 {
                     isWallSliding = true;
                 }
             }
         }
-
-     
     }
 
     private void CheckFalling()
@@ -348,33 +341,27 @@ public class PlayerMovement : MonoBehaviour
     {
         if (animator == null) return;
 
-        // Calculate target animation speed
         float actualSpeed = Mathf.Abs(rb.linearVelocity.x);
         float maxSpeed = maxWalkSpeed / weight;
         float normalizedSpeed = Mathf.Clamp01(actualSpeed / maxSpeed);
         float inputInfluence = Mathf.Abs(horizontalInput);
 
-        // Blend between actual movement and input influence
         float targetSpeed = Mathf.Lerp(normalizedSpeed, inputInfluence, 0.3f);
 
-        // Smoothly interpolate towards target speed
         float smoothFactor = animationSmoothSpeed * Time.deltaTime;
 
-        // Use different smoothing when decelerating vs accelerating
         if (targetSpeed < currentAnimSpeed)
         {
-            smoothFactor *= 2f; // Faster deceleration
+            smoothFactor *= 2f;
         }
 
         currentAnimSpeed = Mathf.Lerp(currentAnimSpeed, targetSpeed, smoothFactor);
 
-        // Snap to zero when very close to avoid floating point precision issues
         if (currentAnimSpeed < 0.01f)
         {
             currentAnimSpeed = 0f;
         }
 
-        // Set animator parameters
         animator.SetFloat(SpeedHash, currentAnimSpeed);
         animator.SetBool(IsGroundedHash, isGrounded);
         animator.SetBool(IsWallSlidingHash, isWallSliding);
@@ -384,15 +371,13 @@ public class PlayerMovement : MonoBehaviour
         animator.SetBool(IsJumpingHash, isJumping);
         animator.SetFloat(VerticalVelocityHash, rb.linearVelocity.y);
     }
-    // Visual debugging for wall detection
+
     private void OnDrawGizmosSelected()
     {
-        // Ground check
         Gizmos.color = isGrounded ? Color.green : Color.red;
         Vector2 groundCastOrigin = (Vector2)transform.position + groundCheckOffset;
         Gizmos.DrawWireCube(groundCastOrigin + Vector2.down * groundCheckDistance * 0.5f, new Vector3(groundCheckSize.x, groundCheckSize.y + groundCheckDistance, 0));
 
-        // Wall checks
         if (Application.isPlaying)
         {
             Gizmos.color = isOnWall ? Color.yellow : Color.blue;
