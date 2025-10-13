@@ -58,7 +58,8 @@ public class HealthModule : MonoBehaviour
         onDeath?.Invoke();
     }
 
-
+    public float GetCurrentHealth() => currentHealth;
+    public float GetMaxHealth() => maxHealth;
     public bool CanBeHit() => !invincible;
 
 }
