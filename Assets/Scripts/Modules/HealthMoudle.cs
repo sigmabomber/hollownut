@@ -25,7 +25,7 @@ public class HealthModule : MonoBehaviour
     }
 
     // Takes damage
-    public virtual void TakeDamage(float amount)
+    public virtual void TakeDamage(float amount, Vector2? point = null)
     {
         if (invincible) 
         {
@@ -58,7 +58,8 @@ public class HealthModule : MonoBehaviour
         onDeath?.Invoke();
     }
 
-
+    public float GetCurrentHealth() => currentHealth;
+    public float GetMaxHealth() => maxHealth;
     public bool CanBeHit() => !invincible;
 
 }
