@@ -114,6 +114,12 @@ public class PlayerMovement : MonoBehaviour
     [Header("Input Settings")]
     [SerializeField] private float inputSmoothSpeed = 10f;
 
+
+
+    public bool canMove = true;
+    public bool canJump = true;
+
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -157,11 +163,13 @@ public class PlayerMovement : MonoBehaviour
         float targetInput = 0f;
         if (Input.GetKey(leftKey)) targetInput -= 1f;
         if (Input.GetKey(rightKey)) targetInput += 1f;
-
+        if (canMove)
         horizontalInput = Mathf.MoveTowards(horizontalInput, targetInput, inputSmoothSpeed * Time.deltaTime);
-
-        jumpPressed = Input.GetKeyDown(jumpKey);
-        jumpHeld = Input.GetKey(jumpKey);
+        if (canJump)
+        {
+            jumpPressed = Input.GetKeyDown(jumpKey);
+            jumpHeld = Input.GetKey(jumpKey);
+        }
         if (jumpPressed) jumpBufferCounter = jumpBufferTime;
 
         if (Input.GetKeyDown(dashKey) && canDash && (isGrounded || canDashInAir)) StartCoroutine(Dash());

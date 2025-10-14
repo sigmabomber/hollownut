@@ -18,6 +18,11 @@ public class RollingBouncingBall : MonoBehaviour
     public float rollingRotationSpeed = 360f;
     public float bouncingRotationSpeed = 720f;
 
+    [Header("Raycast Settings")]
+    public float wallCheckDistance = 0.2f;
+    public int horizontalRays = 3;
+    public float raySpacing = 0.1f;
+
     private Rigidbody2D rb;
     private CircleCollider2D col;
     private SpriteRenderer spriteRenderer;
@@ -29,9 +34,7 @@ public class RollingBouncingBall : MonoBehaviour
     private float bounceTimer = 0f;
     public bool bounce = false;
 
-
-
-    public List<Sprite> acornStates = new();   
+    public List<Sprite> acornStates = new();
 
     void Start()
     {
@@ -57,7 +60,6 @@ public class RollingBouncingBall : MonoBehaviour
 
         SetRollingMode();
 
-
         if (healthModule != null)
         {
             healthModule.Initialize(5);
@@ -73,18 +75,21 @@ public class RollingBouncingBall : MonoBehaviour
         healthModule.onHealthChanged -= HandleHealthChange;
         Destroy(gameObject);
     }
+
     void HandleHealthChange(float current, float max)
     {
         int index = Mathf.Clamp((int)current, 0, acornStates.Count - 1);
         spriteRenderer.sprite = acornStates[index];
     }
 
-
     void FixedUpdate()
     {
         RaycastHit2D groundHit = Physics2D.Raycast(transform.position, Vector2.down, col.radius + 0.1f, groundLayer);
         bool wasGrounded = isGrounded;
         isGrounded = groundHit.collider != null;
+
+        // Check for walls using raycasting
+        CheckForWalls();
 
         if (isBouncing)
         {
@@ -105,7 +110,7 @@ public class RollingBouncingBall : MonoBehaviour
                 SetRollingMode();
             }
         }
-        else 
+        else
         {
             float targetXVel = movingRight ? rollingSpeed : -rollingSpeed;
             rb.linearVelocity = new Vector2(targetXVel, rb.linearVelocity.y);
@@ -120,7 +125,36 @@ public class RollingBouncingBall : MonoBehaviour
         }
     }
 
- 
+    void CheckForWalls()
+    {
+        if (!canFlip) return;
+
+        Vector2 direction = movingRight ? Vector2.right : Vector2.left;
+        Vector2 origin = (Vector2)transform.position;
+        float radius = col.radius;
+
+        // Cast multiple rays vertically to detect walls at different heights
+        for (int i = 0; i < horizontalRays; i++)
+        {
+            float verticalOffset = (i - (horizontalRays - 1) * 0.5f) * raySpacing;
+            Vector2 rayOrigin = origin + new Vector2(0, verticalOffset);
+
+            RaycastHit2D hit = Physics2D.Raycast(rayOrigin, direction, radius + wallCheckDistance, wallLayer);
+
+            // Debug visualization
+            Debug.DrawRay(rayOrigin, direction * (radius + wallCheckDistance), hit.collider != null ? Color.red : Color.green);
+
+            if (hit.collider != null)
+            {
+                // Only flip if the wall is primarily horizontal (normal x is significant)
+                if (Mathf.Abs(hit.normal.x) > Mathf.Abs(hit.normal.y))
+                {
+                    FlipDirection();
+                    break; // Only flip once per frame
+                }
+            }
+        }
+    }
 
     void RotateRolling()
     {
@@ -136,34 +170,16 @@ public class RollingBouncingBall : MonoBehaviour
         transform.Rotate(0, 0, rotationAmount);
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (((1 << collision.gameObject.layer) & wallLayer) != 0)
-        {
-            ContactPoint2D contact = collision.GetContact(0);
-            Vector2 collisionDirection = contact.normal;
-
-            if (Mathf.Abs(collisionDirection.x) > Mathf.Abs(collisionDirection.y) && canFlip)
-            {
-                FlipDirection();
-            }
-        }
-    }
-
     void Launch()
     {
         float xVel = movingRight ? rollingSpeed : -rollingSpeed;
-
         float yVel = Mathf.Sqrt(2 * bounceHeight * Mathf.Abs(Physics2D.gravity.y * rb.gravityScale));
-
         rb.linearVelocity = new Vector2(xVel, yVel);
-
     }
 
     void FlipDirection()
     {
         movingRight = !movingRight;
-
         canFlip = false;
         Invoke(nameof(ResetFlip), 0.2f);
 
@@ -187,7 +203,6 @@ public class RollingBouncingBall : MonoBehaviour
         }
 
         rb.linearVelocity = new Vector2(movingRight ? rollingSpeed : -rollingSpeed, rb.linearVelocity.y);
-
     }
 
     void SetBouncingMode()
@@ -208,10 +223,8 @@ public class RollingBouncingBall : MonoBehaviour
         {
             rb.linearVelocity = new Vector2(movingRight ? rollingSpeed : -rollingSpeed, rb.linearVelocity.y);
         }
-
     }
 
-   
     public void StartBouncing(float duration = -1f)
     {
         if (duration > 0)
@@ -222,7 +235,6 @@ public class RollingBouncingBall : MonoBehaviour
         SetBouncingMode();
     }
 
- 
     public void StartRolling()
     {
         SetRollingMode();
@@ -232,6 +244,4 @@ public class RollingBouncingBall : MonoBehaviour
     {
         return isBouncing;
     }
-
-   
 }

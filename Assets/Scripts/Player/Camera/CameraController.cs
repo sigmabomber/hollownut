@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
@@ -7,7 +8,7 @@ public class CameraController : MonoBehaviour
     public float smoothSpeed = 0.2f;
     public Vector2 lookAhead = new Vector2(1.5f, 0f); 
 
-    [Header("Hollow Knight Style Settings")]
+    [Header("Settings")]
     public float verticalDeadZone = 1f; 
     public float verticalFollowThreshold = 2f; 
     public bool enableVerticalFollow = true; 
@@ -44,7 +45,7 @@ public class CameraController : MonoBehaviour
         minBounds = currentZone.minBounds;
         maxBounds = currentZone.maxBounds;
 
-        currentTargetPos = CalculateHollowKnightTarget();
+        currentTargetPos = CalculateTarget();
 
         Vector3 smoothedPos = Vector3.SmoothDamp(transform.position, currentTargetPos, ref velocity, smoothSpeed);
         smoothedPos.z = transform.position.z;
@@ -54,7 +55,7 @@ public class CameraController : MonoBehaviour
         
     }
 
-    private Vector3 CalculateHollowKnightTarget()
+    private Vector3 CalculateTarget()
     {
         Vector3 targetPos = transform.position; 
 
@@ -94,6 +95,32 @@ public class CameraController : MonoBehaviour
         return ApplyBounds(targetPos);
     }
 
+    public void ShakeCamera(float duration, float magnitude)
+    {
+        StartCoroutine(ShakeCoroutine(duration, magnitude));
+    }
+
+    private IEnumerator ShakeCoroutine(float duration, float magnitude)
+    {
+        Vector3 originalPos = transform.localPosition;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            if (Time.timeScale <= 0.1) break; 
+
+            float x = Random.Range(-1f, 1f) * magnitude;
+            float y = Random.Range(-1f, 1f) * magnitude;
+
+            transform.localPosition = new Vector3(originalPos.x + x, originalPos.y + y, originalPos.z);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.localPosition = originalPos;
+    }
+
     private Vector3 ApplyBounds(Vector3 position)
     {
         Vector3 boundedPos = position;
@@ -120,6 +147,11 @@ public class CameraController : MonoBehaviour
         {
             cam.enableVerticalFollow = follow;
         }
+    }
+    public void DarkenArena(float darknessAmount)
+    {
+        // Optional: Implement screen darkening for phase transitions
+        // This could use a UI overlay or post-processing effect
     }
 
     public void SetZone(CameraZone zone)
