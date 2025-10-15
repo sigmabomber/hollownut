@@ -709,7 +709,7 @@ BoxCollider2D:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 0
   m_LayerOverridePriority: 0
   m_ForceSendLayers:
     serializedVersion: 2
@@ -912,32 +912,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84cbbbcf56f28b9489a05454c7ba1d8c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelBoss
-  maxHealth: 1000
-  currentHealth: 0
-  phase2Threshold: 500
-  phase3Threshold: 200
-  moveSpeed: 5
+  phase: 1
+  phase2HealthThreshold: 0.5
+  runSpeed: 8
+  jumpForce: 12
+  airControlMultiplier: 0.7
+  acornProjectile: {fileID: 937680094235919110, guid: 416bb9981808fc149859066adfc8a6ff, type: 3}
+  rollingAcornPrefab: {fileID: 937680094235919110, guid: 416bb9981808fc149859066adfc8a6ff, type: 3}
+  throwOffset: {x: 1, y: 0.5, z: 0}
+  throwForce: 15
+  biteDamage: 2
   attackCooldown: 1.5
-  animator: {fileID: 583407284}
-  player: {fileID: 316473804}
-  nutProjectile: {fileID: 5552013904770031665, guid: 3c5116c04a80eaa44a58a67fef963212, type: 3}
-  smallNutProjectile: {fileID: 5552013904770031665, guid: 3c5116c04a80eaa44a58a67fef963212, type: 3}
-  debrisPrefab: {fileID: 0}
-  healingSeedPrefab: {fileID: 0}
-  energyOrbPrefab: {fileID: 0}
-  giantAcornPrefab: {fileID: 937680094235919110, guid: 416bb9981808fc149859066adfc8a6ff, type: 3}
-  impactParticlesPrefab: {fileID: 0}
-  rootTrapPrefab: {fileID: 0}
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 8
-  playerLayer:
-    serializedVersion: 2
-    m_Bits: 128
-  groundCheckDistance: 1
-  acornSpawnHeight: 3
-  acornBounceChance: 0.3
-  enrageAcornBounceChance: 0.6
+  telegraphTime: 0.3
+  miniSquirrelPrefab: {fileID: 0}
+  numberOfMiniSquirrels: 3
+  healAmount: 0.3
+  hitParticles: {fileID: 0}
+  phaseTransitionParticles: {fileID: 0}
+  phase1Color: {r: 1, g: 1, b: 1, a: 1}
+  phase2Color: {r: 1, g: 0.3, b: 0.3, a: 1}
+  flashDuration: 0.1
+  roarSound: {fileID: 0}
+  biteSound: {fileID: 0}
+  impactSound: {fileID: 0}
+  phaseTransitionSound: {fileID: 0}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1642,4 +1640,3 @@ SceneRoots:
   - {fileID: 1217859163}
   - {fileID: 477858844}
   - {fileID: 583407282}
-  - {fileID: 2127767638}
