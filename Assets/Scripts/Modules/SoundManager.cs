@@ -72,7 +72,6 @@ public class SoundManager : MonoBehaviour
 
     public void PlaySFX(string sfxName)
     {
-        print(sfxName);
         if (string.IsNullOrEmpty(sfxName)) return;
 
         if (!CachedSFXClips.TryGetValue(sfxName, out AudioClip clip) || clip == null)

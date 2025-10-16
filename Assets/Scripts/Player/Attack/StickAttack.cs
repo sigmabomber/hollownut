@@ -167,7 +167,7 @@ public class StickAttack : MonoBehaviour
         {
             enemyHealth = other.GetComponent<HealthModule>();
         }
-
+        if (enemyHealth.invincible) return;
         if (isEnemy && (enemyHealth == null))
             return;
 

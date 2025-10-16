@@ -124,10 +124,12 @@ public class EnemyModule : MonoBehaviour
     }
     private void OnTriggerExit2D(Collider2D other)
     {
+        // Do not clear target when leaving range
+        // Only disable attack collider if needed
         if (other.gameObject == target)
         {
-            target = null;
             attackCollider.enabled = false;
+            // target remains set
         }
     }
 

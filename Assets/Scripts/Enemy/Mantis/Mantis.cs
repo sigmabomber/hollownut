@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Mantis : MonoBehaviour
 {
@@ -89,7 +90,7 @@ public class Mantis : MonoBehaviour
     private Animator slashAnimator;
     public GameObject slashObj;
     private SpriteRenderer spriteRenderer;
-    private StickAttack cachedPlayerAttack;
+    public StickAttack cachedPlayerAttack;
     private Rigidbody2D rb;
 
     private bool isDead = false;
@@ -101,10 +102,30 @@ public class Mantis : MonoBehaviour
     private bool isDashing = false;
     private float lastPlayerAttackTime = -999f;
 
+    private bool isInitialized = false;
+    private List<Coroutine> activeCoroutines = new List<Coroutine>();
+    private float lastStateChangeTime = 0f;
+    private const float MIN_STATE_CHANGE_TIME = 0.1f;
+    private bool hasDetectedPlayer = false;
+    private bool isAttackInProgress = false;
+    private bool shouldMoveDuringAttack = false;
+
+    public GameObject cachedPlayerObject = null;
+    private Vector2 lastKnownPlayerPosition;
+    private float lastPlayerSeenTime = -999f;
+    private const float PLAYER_SEARCH_DURATION = 10f; 
+
     public bool IsDefensiveMode => isDefensiveMode;
 
     void Start()
     {
+        Initialize();
+    }
+
+    private void Initialize()
+    {
+        if (isInitialized) return;
+
         enemyModule = GetComponent<EnemyModule>();
         healthModule = GetComponent<HealthModule>();
         animator = GetComponent<Animator>();
@@ -115,6 +136,10 @@ public class Mantis : MonoBehaviour
         {
             slashAnimator = slashObj.GetComponent<Animator>();
             slashObj.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("SlashObj not assigned in Mantis script");
         }
 
         PickNewRoamTarget();
@@ -129,6 +154,10 @@ public class Mantis : MonoBehaviour
 
             enemyModule.OnTargetDetected += OnPlayerDetected;
         }
+        else
+        {
+            Debug.LogError("EnemyModule not found on Mantis");
+        }
 
         if (healthModule != null)
         {
@@ -137,6 +166,12 @@ public class Mantis : MonoBehaviour
             healthModule.onDeath += HandleDeath;
             healthModule.onInvincDamage += OnParryTrigger;
         }
+        else
+        {
+            Debug.LogError("HealthModule not found on Mantis");
+        }
+
+        isInitialized = true;
     }
 
     private void UpdateDefensiveMode()
@@ -189,9 +224,38 @@ public class Mantis : MonoBehaviour
     private IEnumerator DeathSequence()
     {
         isDead = true;
-        animator.SetBool(DeathHash, true);
-        spriteRenderer.color = Color.white;
 
+        if (animator != null)
+        {
+            animator.SetBool(IsBlockingHash, false);
+            animator.SetBool(IsAttackingHash, false);
+            animator.SetFloat(MoveSpeedHash, 0f);
+            animator.SetBool(DeathHash, true);
+        }
+
+        spriteRenderer.color = Color.white;
+        CleanupAllCoroutines();
+
+        if (slashObj != null)
+        {
+            slashObj.SetActive(false);
+        }
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
+
+        yield return new WaitForSeconds(2f);
+
+        if (gameObject != null)
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void CleanupAllCoroutines()
+    {
         if (currentActionCoroutine != null)
         {
             StopCoroutine(currentActionCoroutine);
@@ -210,18 +274,22 @@ public class Mantis : MonoBehaviour
             flashCoroutine = null;
         }
 
-        if (slashObj != null)
+        foreach (var coroutine in activeCoroutines)
         {
-            slashObj.SetActive(false);
+            if (coroutine != null)
+            {
+                StopCoroutine(coroutine);
+            }
         }
+        activeCoroutines.Clear();
 
-        yield return new WaitForSeconds(2f);
-        Destroy(gameObject);
+        isAttackInProgress = false;
+        shouldMoveDuringAttack = false;
     }
 
     void Update()
     {
-        if (isDead) return;
+        if (isDead || !isInitialized) return;
 
         UpdateDefensiveMode();
 
@@ -231,56 +299,221 @@ public class Mantis : MonoBehaviour
         if (stateTimer > 0)
             stateTimer -= Time.deltaTime;
 
-        if (enemyModule?.target == null)
-        {
-            if (currentState != MantisState.Roaming && currentState != MantisState.Idle)
-            {
-                TransitionToState(MantisState.Roaming);
-            }
-        }
-        else if (player == null)
-        {
-            player = enemyModule.target.transform;
-            cachedPlayerAttack = player.GetComponent<StickAttack>();
-        }
+        UpdatePlayerReference();
 
         if (player != null && ShouldUpdateFacingDirection())
         {
             UpdateFacingDirection();
         }
 
-        if ((currentState == MantisState.Chasing || currentState == MantisState.DefensiveStance) &&
-            player != null && attackCooldownTimer <= 0)
-        {
-            CheckForIncomingAttack();
-        }
-
         switch (currentState)
         {
             case MantisState.Idle:
-                TransitionToState(MantisState.Roaming);
+                HandleIdleState();
                 break;
             case MantisState.Roaming:
-                UpdateRoaming();
+                HandleRoamingState();
                 break;
             case MantisState.Chasing:
-                UpdateChasing();
+                HandleChasingState();
                 break;
             case MantisState.Attacking:
-                UpdateAttacking();
+                HandleAttackingState();
                 break;
             case MantisState.Retreating:
-                UpdateRetreating();
                 break;
             case MantisState.Parrying:
-                UpdateParrying();
+                HandleParryingState();
                 break;
             case MantisState.DefensiveStance:
-                UpdateDefensiveStance();
+                HandleDefensiveStanceState();
                 break;
         }
 
         UpdateAnimator();
+    }
+
+    private void UpdatePlayerReference()
+    {
+        if (cachedPlayerObject != null)
+        {
+            if (cachedPlayerObject.activeInHierarchy && cachedPlayerObject.transform != null)
+            {
+                player = cachedPlayerObject.transform;
+                cachedPlayerAttack = player?.GetComponent<StickAttack>();
+
+                if (player != null && IsPlayerInDetectionRange())
+                {
+                    lastKnownPlayerPosition = player.position;
+                    lastPlayerSeenTime = Time.time;
+                }
+                return;
+            }
+            else
+            {
+                cachedPlayerObject = null;
+                player = null;
+                cachedPlayerAttack = null;
+            }
+        }
+        if (enemyModule?.target != null)
+        {
+            OnPlayerDetected(enemyModule.target);
+        }
+    }
+
+  
+
+    private void HandleIdleState()
+    {
+        if (hasDetectedPlayer)
+        {
+            TransitionToState(MantisState.Chasing);
+        }
+        else
+        {
+            TransitionToState(MantisState.Roaming);
+        }
+    }
+
+    private void HandleRoamingState()
+    {
+        if (hasDetectedPlayer)
+        {
+            TransitionToState(MantisState.Chasing);
+            return;
+        }
+
+        if (isWaitingToRoam)
+        {
+            roamTimer -= Time.deltaTime;
+            if (roamTimer <= 0)
+            {
+                isWaitingToRoam = false;
+                PickNewRoamTarget();
+            }
+            return;
+        }
+
+        Vector2 direction = (roamTarget - (Vector2)transform.position).normalized;
+        direction.y = 0;
+        float distanceToTarget = Vector2.Distance(transform.position, roamTarget);
+
+        if (distanceToTarget > 0.5f)
+        {
+            if (rb != null)
+            {
+                rb.linearVelocity = direction * roamSpeed;
+            }
+            else
+            {
+                transform.position += (Vector3)direction * roamSpeed * Time.deltaTime;
+            }
+
+            if (Mathf.Abs(direction.x) > 0.1f)
+            {
+                transform.localScale = new Vector3(Mathf.Sign(direction.x), 1, 1);
+            }
+        }
+        else
+        {
+            isWaitingToRoam = true;
+            roamTimer = roamWaitTime;
+            if (rb != null) rb.linearVelocity = Vector2.zero;
+        }
+    }
+
+    private void HandleChasingState()
+    {
+        if (cachedPlayerObject == null)
+        {
+            if (rb != null) rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
+        player = cachedPlayerObject.transform; 
+        UpdateFacingDirection();
+
+        float distanceToPlayer = Mathf.Abs(player.position.x - transform.position.x);
+
+        MoveTowardsPlayer(chaseSpeed);
+
+        if (attackCooldownTimer <= 0 && !isAttackInProgress)
+        {
+            if (distanceToPlayer <= attackRange)
+            {
+                if (isDefensiveMode)
+                    StartDefensiveAttack();
+                else
+                    StartSlashCombo();
+            }
+            else if (distanceToPlayer <= optimalDistance)
+            {
+                StartDashAttack();
+            }
+        }
+    }
+
+    private bool IsPlayerInDetectionRange()
+    {
+        return cachedPlayerObject != null;
+    }
+
+   
+
+    private void HandleAttackingState()
+    {
+        if (player != null && ShouldUpdateFacingDirection())
+        {
+            UpdateFacingDirection();
+        }
+
+        if (shouldMoveDuringAttack && player != null)
+        {
+            Vector2 direction = new Vector2(Mathf.Sign(player.position.x - transform.position.x), 0);
+            if (rb != null)
+            {
+                rb.linearVelocity = direction * chaseSpeed * 0.3f;
+            }
+        }
+        else
+        {
+            if (rb != null && !isDashing)
+            {
+                rb.linearVelocity = Vector2.zero;
+            }
+        }
+    }
+
+    private void HandleParryingState()
+    {
+        if (stateTimer <= 0)
+        {
+            if (healthModule != null)
+            {
+                healthModule.invincible = false;
+            }
+
+            if (!playerAttackedDuringParry)
+            {
+                TransitionToState(MantisState.Chasing);
+                attackCooldownTimer = 0.3f;
+            }
+        }
+    }
+
+    private void HandleDefensiveStanceState()
+    {
+        if (player == null)
+        {
+            TransitionToState(MantisState.Chasing);
+            return;
+        }
+
+        if (stateTimer <= 0)
+        {
+            TransitionToState(MantisState.Chasing);
+        }
     }
 
     private bool ShouldUpdateFacingDirection()
@@ -297,50 +530,24 @@ public class Mantis : MonoBehaviour
         if (player == null) return;
 
         Vector2 directionToPlayer = player.position - transform.position;
-
         if (Mathf.Abs(directionToPlayer.x) > 0.1f)
         {
-            float newScaleX = Mathf.Sign(directionToPlayer.x);
-            transform.localScale = new Vector3(newScaleX, 1, 1);
-        }
-    }
-
-    private void UpdateDefensiveStance()
-    {
-        if (player == null)
-        {
-            TransitionToState(MantisState.Roaming);
-            return;
-        }
-
-        if (stateTimer <= 0)
-        {
-            float distanceToPlayer = Vector2.Distance(transform.position, player.position);
-            if (isDefensiveMode)
-            {
-                if (distanceToPlayer <= attackRange && attackCooldownTimer <= 0)
-                {
-                    StartDefensiveAttack();
-                }
-                else
-                {
-                    TransitionToState(MantisState.Chasing);
-                    attackCooldownTimer = defensiveCooldown;
-                }
-            }
-            else
-            {
-                TransitionToState(MantisState.Chasing);
-            }
+            transform.localScale = new Vector3(Mathf.Sign(directionToPlayer.x), 1, 1);
         }
     }
 
     private void StartDefensiveAttack()
     {
+        if (isAttackInProgress || attackCooldownTimer > 0) return;
+
         TransitionToState(MantisState.Attacking);
         targetSlashCount = Random.Range(1, defensiveMaxSlashCount + 1);
         currentSlashCount = 0;
+        isAttackInProgress = true;
+        shouldMoveDuringAttack = false;
+        attackCooldownTimer = timeBetweenAttacks * 1.5f;
         currentActionCoroutine = StartCoroutine(ExecuteDefensiveSlashCombo());
+        TrackCoroutine(currentActionCoroutine);
     }
 
     private IEnumerator ExecuteDefensiveSlashCombo()
@@ -349,7 +556,13 @@ public class Mantis : MonoBehaviour
 
         for (int i = 0; i < targetSlashCount; i++)
         {
-            if (currentState != MantisState.Attacking) yield break;
+            if (currentState != MantisState.Attacking || isDead || !IsPlayerInAttackRange())
+            {
+                SafeSlashObjectDeactivation();
+                isAttackInProgress = false;
+                shouldMoveDuringAttack = false;
+                yield break;
+            }
 
             if (slashObj != null)
             {
@@ -374,58 +587,37 @@ public class Mantis : MonoBehaviour
 
             if (i < targetSlashCount - 1)
             {
-                if (slashObj != null)
-                {
-                    slashObj.SetActive(false);
-                    if (slashAnimator != null)
-                    {
-                        slashAnimator.SetBool(IsAttackingHash, false);
-                    }
-                }
+                SafeSlashObjectDeactivation();
                 yield return new WaitForSeconds(timeBetweenSlashes);
+
+                if (!IsPlayerInAttackRange())
+                {
+                    SafeSlashObjectDeactivation();
+                    isAttackInProgress = false;
+                    shouldMoveDuringAttack = false;
+                    yield break;
+                }
             }
 
             currentSlashCount++;
         }
 
-        if (slashObj != null)
-        {
-            slashObj.SetActive(false);
-            if (slashAnimator != null)
-            {
-                slashAnimator.SetBool(IsAttackingHash, false);
-            }
-        }
-
-        attackCooldownTimer = timeBetweenAttacks * 1.2f;
+        SafeSlashObjectDeactivation();
+        isAttackInProgress = false;
+        shouldMoveDuringAttack = false;
+        yield return new WaitForSeconds(0.2f);
         StartJumpBack(isDefensiveMode ? defensiveJumpBackForce : jumpBackForce);
     }
 
-    private void CheckForIncomingAttack()
+    private bool IsPlayerInAttackRange()
     {
-        if (cachedPlayerAttack == null || player == null) return;
-
-        float distanceToPlayer = Vector2.Distance(transform.position, player.position);
-
-        if (distanceToPlayer <= parryDetectionRange)
-        {
-            if (cachedPlayerAttack.IsAttacking() && Time.time - lastPlayerAttackTime > 0.5f)
-            {
-                lastPlayerAttackTime = Time.time;
-
-                float currentParryChance = isDefensiveMode ? defensiveParryChance : parryChance;
-
-                if (Random.value < currentParryChance)
-                {
-                    StartParry();
-                }
-                else if (isDefensiveMode)
-                {
-                    QuickJumpBack();
-                }
-            }
-        }
+        if (player == null) return false;
+        float distanceToPlayer = Mathf.Abs(player.position.x - transform.position.x);
+        return distanceToPlayer <= attackRange * 2f;
     }
+
+    
+    
 
     private void QuickJumpBack()
     {
@@ -445,17 +637,20 @@ public class Mantis : MonoBehaviour
 
         TransitionToState(MantisState.Retreating);
         jumpBackCoroutine = StartCoroutine(ExecuteJumpBack(force));
+        TrackCoroutine(jumpBackCoroutine);
     }
 
     private IEnumerator ExecuteJumpBack(float force)
     {
-        animator.SetTrigger(JumpbackHash);
+        if (animator != null)
+        {
+            animator.SetTrigger(JumpbackHash);
+        }
 
         Vector2 jumpDirection = Vector2.zero;
         if (player != null)
         {
-            jumpDirection = ((Vector2)transform.position - (Vector2)player.position).normalized;
-            jumpDirection = new Vector2(Mathf.Sign(jumpDirection.x), 0.5f).normalized;
+            jumpDirection = new Vector2(-Mathf.Sign(player.position.x - transform.position.x), 0.5f).normalized;
         }
         else
         {
@@ -470,11 +665,21 @@ public class Mantis : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f);
 
-        if (isDefensiveMode)
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
+
+        if (player != null)
+        {
+            UpdateFacingDirection();
+        }
+
+        if (isDefensiveMode && !isDead)
         {
             StartDefensiveStance();
         }
-        else
+        else if (!isDead)
         {
             TransitionToState(MantisState.Chasing);
         }
@@ -484,6 +689,15 @@ public class Mantis : MonoBehaviour
 
     private void TransitionToState(MantisState newState)
     {
+        if (currentState == newState) return;
+
+        if (Time.time - lastStateChangeTime < MIN_STATE_CHANGE_TIME)
+        {
+            return;
+        }
+
+        lastStateChangeTime = Time.time;
+
         if (currentActionCoroutine != null)
         {
             StopCoroutine(currentActionCoroutine);
@@ -500,202 +714,81 @@ public class Mantis : MonoBehaviour
         {
             StopCoroutine(flashCoroutine);
             flashCoroutine = null;
-            spriteRenderer.color = Color.white;
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = Color.white;
+            }
         }
 
-        if (currentState == MantisState.Parrying)
+        if (currentState == MantisState.Parrying && healthModule != null)
         {
             healthModule.invincible = false;
         }
 
-        if (slashObj != null && currentState == MantisState.Attacking)
-        {
-            slashObj.SetActive(false);
-        }
+        SafeSlashObjectDeactivation();
 
         playerAttackedDuringParry = false;
         isDashing = false;
+        isAttackInProgress = false;
+        shouldMoveDuringAttack = false;
+
+        if (newState != MantisState.Retreating && rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
 
         currentState = newState;
         stateTimer = 0f;
     }
 
-    private void UpdateRoaming()
-    {
-        if (enemyModule?.target != null)
-        {
-            TransitionToState(MantisState.Chasing);
-            return;
-        }
-
-        if (isWaitingToRoam)
-        {
-            roamTimer -= Time.deltaTime;
-            if (roamTimer <= 0)
-            {
-                isWaitingToRoam = false;
-                PickNewRoamTarget();
-            }
-            return;
-        }
-
-        Vector2 direction = (roamTarget - (Vector2)transform.position).normalized;
-        float distanceToTarget = Vector2.Distance(transform.position, roamTarget);
-
-        if (distanceToTarget > 0.1f)
-        {
-            transform.position += (Vector3)direction * roamSpeed * Time.deltaTime;
-            if (Mathf.Abs(direction.x) > 0.1f)
-            {
-                transform.localScale = new Vector3(Mathf.Sign(direction.x), 1, 1);
-            }
-        }
-        else
-        {
-            isWaitingToRoam = true;
-            roamTimer = roamWaitTime;
-        }
-    }
-
-    private void UpdateChasing()
-    {
-        if (player == null)
-        {
-            TransitionToState(MantisState.Roaming);
-            return;
-        }
-
-        float distanceToPlayer = Vector2.Distance(transform.position, player.position);
-
-        if (isDefensiveMode)
-        {
-            UpdateDefensiveChasing(distanceToPlayer);
-        }
-        else
-        {
-            UpdateAggressiveChasing(distanceToPlayer);
-        }
-    }
-
-    private void UpdateDefensiveChasing(float distanceToPlayer)
-    {
-        if (attackCooldownTimer <= 0)
-        {
-            if (distanceToPlayer <= attackRange)
-            {
-                StartDefensiveAttack();
-            }
-            else if (distanceToPlayer <= optimalDistance * 0.7f)
-            {
-                StartDashAttack();
-            }
-            else
-            {
-                if (distanceToPlayer > optimalDistance * 1.2f)
-                {
-                    MoveTowardsPlayer(chaseSpeed * 0.8f);
-                }
-            }
-        }
-    }
-
-    private void UpdateAggressiveChasing(float distanceToPlayer)
-    {
-        if (attackCooldownTimer <= 0)
-        {
-            if (distanceToPlayer <= attackRange)
-            {
-                StartSlashCombo();
-            }
-            else if (distanceToPlayer <= optimalDistance)
-            {
-                StartDashAttack();
-            }
-            else
-            {
-                MoveTowardsPlayer(chaseSpeed);
-            }
-        }
-    }
-
-    private void UpdateAttacking()
-    {
-    }
-
-    private void UpdateRetreating()
-    {
-    }
-
-    private void UpdateParrying()
-    {
-        if (stateTimer <= 0)
-        {
-            healthModule.invincible = false;
-
-            if (!playerAttackedDuringParry)
-            {
-                if (isDefensiveMode)
-                {
-                    StartDefensiveStance();
-                }
-                else
-                {
-                    TransitionToState(MantisState.Chasing);
-                }
-                attackCooldownTimer = 0.3f;
-            }
-        }
-    }
-
     private void MoveTowardsPlayer(float speed)
     {
-        if (player == null) return;
+        if (player == null || rb == null) return;
 
-        Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
-        transform.position += (Vector3)direction * speed * Time.deltaTime;
+        Vector2 direction = (player.position - transform.position).normalized;
+        direction.y = 0;
 
-        if (Mathf.Abs(direction.x) > 0.1f)
-        {
-            transform.localScale = new Vector3(Mathf.Sign(direction.x), 1, 1);
-        }
+        rb.linearVelocity = direction * speed;
     }
+
 
     private void OnPlayerDetected(GameObject detectedPlayer)
     {
-        if (currentState == MantisState.Idle || currentState == MantisState.Roaming)
-        {
-            player = detectedPlayer.transform;
-            cachedPlayerAttack = player.GetComponent<StickAttack>();
+        hasDetectedPlayer = true;
+        cachedPlayerObject = detectedPlayer;
+        player = detectedPlayer.transform;
+        cachedPlayerAttack = player?.GetComponent<StickAttack>();
+        lastKnownPlayerPosition = player.position;
+        lastPlayerSeenTime = Time.time;
 
-            if (isDefensiveMode)
-            {
-                StartDefensiveStance();
-            }
-            else
-            {
-                TransitionToState(MantisState.Chasing);
-            }
-        }
+        TransitionToState(MantisState.Chasing);
     }
 
-    private void StartParry()
-    {
-        TransitionToState(MantisState.Parrying);
-        stateTimer = parryDuration;
-        healthModule.invincible = true;
-        playerAttackedDuringParry = false;
-        StartFlash(Color.cyan, 0.1f);
-    }
+   
 
     private void ExecuteParryCounter()
     {
+        if (isAttackInProgress || attackCooldownTimer > 0) return;
+
         TransitionToState(MantisState.Attacking);
+        isAttackInProgress = true;
+        shouldMoveDuringAttack = false;
+        attackCooldownTimer = timeBetweenAttacks * 0.8f;
         currentActionCoroutine = StartCoroutine(PerformParryCounter());
+        TrackCoroutine(currentActionCoroutine);
     }
 
     private IEnumerator PerformParryCounter()
     {
         SetFacingDirectionToPlayer();
+
+        if (!IsPlayerInAttackRange())
+        {
+            TransitionToState(MantisState.Chasing);
+            isAttackInProgress = false;
+            shouldMoveDuringAttack = false;
+            yield break;
+        }
 
         if (slashObj != null)
         {
@@ -718,33 +811,24 @@ public class Mantis : MonoBehaviour
 
         yield return new WaitForSeconds(0.25f);
 
-        if (slashObj != null)
-        {
-            slashObj.SetActive(false);
-            if (slashAnimator != null)
-            {
-                slashAnimator.SetBool(IsAttackingHash, false);
-            }
-        }
-
-        attackCooldownTimer = 0.3f;
-
-        if (isDefensiveMode)
-        {
-            StartDefensiveStance();
-        }
-        else
-        {
-            TransitionToState(MantisState.Chasing);
-        }
+        SafeSlashObjectDeactivation();
+        isAttackInProgress = false;
+        shouldMoveDuringAttack = false;
+        TransitionToState(MantisState.Chasing);
     }
 
     private void StartSlashCombo()
     {
+        if (isAttackInProgress || attackCooldownTimer > 0) return;
+
         TransitionToState(MantisState.Attacking);
         targetSlashCount = Random.Range(minSlashCount, maxSlashCount + 1);
         currentSlashCount = 0;
+        isAttackInProgress = true;
+        shouldMoveDuringAttack = false;
+        attackCooldownTimer = timeBetweenAttacks;
         currentActionCoroutine = StartCoroutine(ExecuteSlashCombo());
+        TrackCoroutine(currentActionCoroutine);
     }
 
     private IEnumerator ExecuteSlashCombo()
@@ -753,7 +837,13 @@ public class Mantis : MonoBehaviour
 
         for (int i = 0; i < targetSlashCount; i++)
         {
-            if (currentState != MantisState.Attacking) yield break;
+            if (currentState != MantisState.Attacking || isDead || !IsPlayerInAttackRange())
+            {
+                SafeSlashObjectDeactivation();
+                isAttackInProgress = false;
+                shouldMoveDuringAttack = false;
+                yield break;
+            }
 
             if (slashObj != null)
             {
@@ -778,47 +868,53 @@ public class Mantis : MonoBehaviour
 
             if (i < targetSlashCount - 1)
             {
-                if (slashObj != null)
-                {
-                    slashObj.SetActive(false);
-                    if (slashAnimator != null)
-                    {
-                        slashAnimator.SetBool(IsAttackingHash, false);
-                    }
-                }
+                SafeSlashObjectDeactivation();
                 yield return new WaitForSeconds(timeBetweenSlashes);
+
+                if (!IsPlayerInAttackRange())
+                {
+                    SafeSlashObjectDeactivation();
+                    isAttackInProgress = false;
+                    shouldMoveDuringAttack = false;
+                    yield break;
+                }
             }
 
             currentSlashCount++;
         }
 
-        if (slashObj != null)
-        {
-            slashObj.SetActive(false);
-            if (slashAnimator != null)
-            {
-                slashAnimator.SetBool(IsAttackingHash, false);
-            }
-        }
-
-        attackCooldownTimer = timeBetweenAttacks;
+        SafeSlashObjectDeactivation();
+        isAttackInProgress = false;
+        shouldMoveDuringAttack = false;
+        yield return new WaitForSeconds(0.2f);
         StartJumpBack(isDefensiveMode ? defensiveJumpBackForce : jumpBackForce);
     }
 
     private void StartDashAttack()
     {
+        if (isAttackInProgress || attackCooldownTimer > 0) return;
+
         TransitionToState(MantisState.Attacking);
+        isAttackInProgress = true;
+        shouldMoveDuringAttack = true;
+        attackCooldownTimer = timeBetweenAttacks * 1.2f;
         currentActionCoroutine = StartCoroutine(ExecuteDashAttack());
+        TrackCoroutine(currentActionCoroutine);
     }
 
     private IEnumerator ExecuteDashAttack()
     {
-        if (player == null) yield break;
+        if (player == null)
+        {
+            isAttackInProgress = false;
+            shouldMoveDuringAttack = false;
+            yield break;
+        }
 
         SetFacingDirectionToPlayer();
 
         isDashing = true;
-        Vector2 dashDirection = ((Vector2)player.position - (Vector2)transform.position).normalized;
+        Vector2 dashDirection = new Vector2(Mathf.Sign(player.position.x - transform.position.x), 0);
 
         if (slashObj != null)
         {
@@ -839,10 +935,18 @@ public class Mantis : MonoBehaviour
 
         while (dashTimer < dashAttackDuration)
         {
-            if (player == null) break;
+            if (player == null || isDead) break;
 
-            Vector2 currentDirection = ((Vector2)player.position - (Vector2)transform.position).normalized;
-            transform.position += (Vector3)currentDirection * dashAttackSpeed * Time.deltaTime;
+            Vector2 currentDirection = new Vector2(Mathf.Sign(player.position.x - transform.position.x), 0);
+
+            if (rb != null)
+            {
+                rb.linearVelocity = currentDirection * dashAttackSpeed;
+            }
+            else
+            {
+                transform.position += (Vector3)currentDirection * dashAttackSpeed * Time.deltaTime;
+            }
 
             if (!hasHitThisAttack)
             {
@@ -854,21 +958,19 @@ public class Mantis : MonoBehaviour
         }
 
         isDashing = false;
+        isAttackInProgress = false;
+        shouldMoveDuringAttack = false;
 
-        if (slashObj != null)
+        if (rb != null)
         {
-            slashObj.SetActive(false);
-            if (slashAnimator != null)
-            {
-                slashAnimator.SetBool(IsAttackingHash, false);
-            }
+            rb.linearVelocity = Vector2.zero;
         }
 
-        attackCooldownTimer = timeBetweenAttacks;
+        SafeSlashObjectDeactivation();
 
-        if (player != null)
+        if (player != null && !isDead)
         {
-            float distanceToPlayer = Vector2.Distance(transform.position, player.position);
+            float distanceToPlayer = Mathf.Abs(player.position.x - transform.position.x);
             if (distanceToPlayer <= attackRange)
             {
                 StartSlashCombo();
@@ -878,9 +980,9 @@ public class Mantis : MonoBehaviour
                 StartJumpBack(isDefensiveMode ? defensiveJumpBackForce : jumpBackForce);
             }
         }
-        else
+        else if (!isDead)
         {
-            TransitionToState(MantisState.Roaming);
+            TransitionToState(MantisState.Chasing);
         }
     }
 
@@ -897,6 +999,8 @@ public class Mantis : MonoBehaviour
 
     void DetectHits(float damage)
     {
+        if (hasHitThisAttack) return;
+
         Vector2 origin = GetAttackOrigin();
         Vector2 size = GetAttackSize();
         Vector2 direction = GetAttackDirectionVector();
@@ -907,7 +1011,7 @@ public class Mantis : MonoBehaviour
 
     RaycastHit2D[] PerformMultiRaycast(Vector2 origin, Vector2 size, Vector2 direction)
     {
-        System.Collections.Generic.List<RaycastHit2D> allHits = new System.Collections.Generic.List<RaycastHit2D>();
+        List<RaycastHit2D> allHits = new List<RaycastHit2D>();
 
         float spacing;
         Vector2 perpendicular;
@@ -983,23 +1087,15 @@ public class Mantis : MonoBehaviour
 
     void ProcessHit(Collider2D other, Vector2 hitPoint, bool isPlayer, float damage)
     {
-        HealthModule playerHealth = null;
-        if (isPlayer)
-        {
-            playerHealth = other.GetComponent<HealthModule>();
-        }
+        if (!isPlayer) return;
 
-        if (isPlayer && (playerHealth == null))
-            return;
+        HealthModule playerHealth = other.GetComponent<HealthModule>();
+        if (playerHealth == null) return;
 
         hasHitThisAttack = true;
 
         PlayHitVFX(hitPoint, isPlayer);
-
-        if (isPlayer && playerHealth != null)
-        {
-            playerHealth.TakeDamage(damage);
-        }
+        playerHealth.TakeDamage(damage);
     }
 
     void PlayHitVFX(Vector2 position, bool isPlayer)
@@ -1026,7 +1122,7 @@ public class Mantis : MonoBehaviour
 
     private void PickNewRoamTarget()
     {
-        Vector2 randomDirection = Random.insideUnitCircle.normalized;
+        Vector2 randomDirection = new Vector2(Random.Range(-1f, 1f), 0).normalized;
         roamTarget = (Vector2)transform.position + randomDirection * Random.Range(roamDistance * 0.5f, roamDistance);
     }
 
@@ -1035,7 +1131,11 @@ public class Mantis : MonoBehaviour
         if (animator == null) return;
 
         animator.SetBool(IsBlockingHash, currentState == MantisState.Parrying || currentState == MantisState.DefensiveStance);
-        animator.SetBool(IsAttackingHash, currentState == MantisState.Attacking);
+
+        if (currentState != MantisState.Attacking)
+        {
+            animator.SetBool(IsAttackingHash, false);
+        }
 
         float moveSpeed = 0f;
         switch (currentState)
@@ -1058,9 +1158,8 @@ public class Mantis : MonoBehaviour
 
     public void OnDamageTaken(float current, float max)
     {
-        if (current <= 0) return;
+        if (current <= 0 || isDead) return;
 
-        StartFlash(Color.red, 0.1f);
 
         if (isDefensiveMode && current > 0)
         {
@@ -1074,33 +1173,37 @@ public class Mantis : MonoBehaviour
         }
     }
 
-    private void StartFlash(Color color, float duration)
+
+
+    private void TrackCoroutine(Coroutine coroutine)
     {
-        if (flashCoroutine != null)
+        if (coroutine != null && !activeCoroutines.Contains(coroutine))
         {
-            StopCoroutine(flashCoroutine);
+            activeCoroutines.Add(coroutine);
         }
-        flashCoroutine = StartCoroutine(FlashColor(color, duration));
     }
 
-    private IEnumerator FlashColor(Color color, float duration)
+    private void SafeSlashObjectDeactivation()
     {
-        if (spriteRenderer != null)
+        if (slashObj != null)
         {
-            spriteRenderer.color = color;
-            yield return new WaitForSeconds(duration);
-            spriteRenderer.color = Color.white;
+            slashObj.SetActive(false);
+            if (slashAnimator != null)
+            {
+                slashAnimator.SetBool(IsAttackingHash, false);
+            }
         }
-        flashCoroutine = null;
     }
 
     private void OnDisable()
     {
-        StopAllCoroutines();
+        CleanupAllCoroutines();
     }
 
     private void OnDestroy()
     {
+        CleanupAllCoroutines();
+
         if (enemyModule != null)
         {
             enemyModule.OnTargetDetected -= OnPlayerDetected;
@@ -1110,8 +1213,7 @@ public class Mantis : MonoBehaviour
         {
             healthModule.onHealthChanged -= OnDamageTaken;
             healthModule.onInvincDamage -= OnParryTrigger;
+            healthModule.onDeath -= HandleDeath;
         }
     }
-
-   
 }

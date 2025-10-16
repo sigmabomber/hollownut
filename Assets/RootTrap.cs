@@ -27,16 +27,13 @@ public class RootTrap : MonoBehaviour
 
     void Start()
     {
-        // Initialize references if not set
         if (animator == null) animator = GetComponent<Animator>();
         if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
         if (damageCollider == null) damageCollider = GetComponent<Collider2D>();
 
-        // Disable collision initially
         if (damageCollider != null) damageCollider.enabled = false;
         if (triggerCollider != null) triggerCollider.enabled = false;
 
-        // Hide initially
         spriteRenderer.enabled = false;
         if (telegraphIndicator != null) telegraphIndicator.SetActive(false);
     }
@@ -59,19 +56,10 @@ public class RootTrap : MonoBehaviour
 
     IEnumerator RootTrapSequence()
     {
-        // Step 1: Telegraph (warning indicator)
         yield return StartCoroutine(TelegraphPhase());
-
-        // Step 2: Emerge from ground
         yield return StartCoroutine(EmergePhase());
-
-        // Step 3: Stay active and dangerous
         yield return StartCoroutine(ActivePhase());
-
-        // Step 4: Retract back into ground
         yield return StartCoroutine(RetractPhase());
-
-        // Step 5: Clean up
         Destroy(gameObject, 1f);
     }
 
@@ -80,8 +68,6 @@ public class RootTrap : MonoBehaviour
         if (telegraphIndicator != null)
         {
             telegraphIndicator.SetActive(true);
-
-            // Pulse the telegraph indicator
             float telegraphDuration = emergeTime * 0.7f;
             float elapsed = 0f;
             Vector3 originalScale = telegraphIndicator.transform.localScale;
@@ -90,7 +76,6 @@ public class RootTrap : MonoBehaviour
             {
                 float pulse = Mathf.PingPong(elapsed * 5f, 0.3f) + 0.7f;
                 telegraphIndicator.transform.localScale = originalScale * pulse;
-
                 elapsed += Time.deltaTime;
                 yield return null;
             }
@@ -99,28 +84,23 @@ public class RootTrap : MonoBehaviour
         }
         else
         {
-            // Fallback: just wait the emerge time
             yield return new WaitForSeconds(emergeTime * 0.7f);
         }
     }
 
     IEnumerator EmergePhase()
     {
-        // Enable visual
         spriteRenderer.enabled = true;
 
-        // Play emerge particles
         if (emergeParticles != null)
             emergeParticles.Play();
 
-        // Emerge animation
         if (animator != null)
         {
             animator.SetTrigger("Emerge");
         }
         else
         {
-            // Fallback scaling animation
             Vector3 targetScale = transform.localScale;
             transform.localScale = Vector3.zero;
 
@@ -135,9 +115,7 @@ public class RootTrap : MonoBehaviour
             transform.localScale = targetScale;
         }
 
-        // Enable collision
         if (damageCollider != null) damageCollider.enabled = true;
-
         isActive = true;
 
         yield return new WaitForSeconds(0.1f);
@@ -149,10 +127,8 @@ public class RootTrap : MonoBehaviour
 
         while (elapsed < activeTime)
         {
-            // Optional: slight movement or effects during active phase
             if (playerTarget != null)
             {
-                // Add slight tracking behavior for phase 3
                 transform.position = Vector2.Lerp(transform.position, playerTarget.position, Time.deltaTime * 0.3f);
             }
 
@@ -165,24 +141,18 @@ public class RootTrap : MonoBehaviour
     {
         isActive = false;
 
-        // Disable collision
         if (damageCollider != null) damageCollider.enabled = false;
 
-        // Play retract particles
         if (retractParticles != null)
             retractParticles.Play();
 
-        // Retract animation
         if (animator != null)
         {
             animator.SetTrigger("Retract");
-
-            // Wait for animation to complete
             yield return new WaitForSeconds(retractTime);
         }
         else
         {
-            // Fallback scaling animation
             Vector3 originalScale = transform.localScale;
             float elapsed = 0f;
 
@@ -196,7 +166,6 @@ public class RootTrap : MonoBehaviour
             transform.localScale = Vector3.zero;
         }
 
-        // Hide sprite
         spriteRenderer.enabled = false;
     }
 
@@ -218,21 +187,18 @@ public class RootTrap : MonoBehaviour
 
     void PlayerHit(GameObject player)
     {
-        // Apply damage
         HealthModule playerHealth = player.GetComponent<HealthModule>();
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(damage, transform.position);
         }
 
-        // Apply immobilize effect
         PlayerMovement playerController = player.GetComponent<PlayerMovement>();
         if (playerController != null)
         {
             StartCoroutine(ImmobilizePlayer(playerController));
         }
 
-        // Optional: Play hit effect
         PlayHitEffect();
     }
 
@@ -240,23 +206,18 @@ public class RootTrap : MonoBehaviour
     {
         if (playerController != null)
         {
-            // Store original movement state
             bool couldMove = playerController.canMove;
             bool couldJump = playerController.canJump;
 
-            // Immobilize
             playerController.canMove = false;
             playerController.canJump = false;
 
-            // Add root visual effect to player
             SpriteRenderer playerRenderer = playerController.GetComponent<SpriteRenderer>();
             Color originalColor = playerRenderer.color;
-            playerRenderer.color = new Color(0.5f, 0.3f, 0.1f, 1f); // Brownish tint
+            playerRenderer.color = new Color(0.5f, 0.3f, 0.1f, 1f);
 
-            // Wait for immobilize duration
             yield return new WaitForSeconds(immobilizeDuration);
 
-            // Restore movement if player is still alive
             if (playerController != null)
             {
                 playerController.canMove = couldMove;
@@ -268,16 +229,11 @@ public class RootTrap : MonoBehaviour
 
     void PlayHitEffect()
     {
-        // You can add particle effects, sounds, or screen shake here
         CameraController cameraController = Camera.main.GetComponent<CameraController>();
         if (cameraController != null)
         {
-            // Use your existing camera shake method
             cameraController.ShakeCamera(0.2f, 0.1f);
         }
-
-        // Optional: Play sound
-        // AudioManager.Instance.PlaySound("RootTrapHit");
     }
 
     [Header("Debug")]
@@ -287,13 +243,11 @@ public class RootTrap : MonoBehaviour
     {
         if (!showDebugGizmos) return;
 
-        // Draw telegraph area
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, 0.5f);
 
         if (isActive)
         {
-            // Draw damage area when active
             Gizmos.color = Color.red;
             if (damageCollider != null)
             {
@@ -309,7 +263,6 @@ public class RootTrap : MonoBehaviour
         }
     }
 
-    // Public methods for external control
     public void SetDamage(int newDamage)
     {
         damage = newDamage;

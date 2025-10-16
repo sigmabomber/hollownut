@@ -77,6 +77,8 @@ public class AntlionLarva : MonoBehaviour
     private bool isDead = false;
     private Coroutine currentDashCoroutine;
     private Coroutine currentJumpBackCoroutine;
+    private Coroutine currentAttackCoroutine;
+    private Coroutine currentSearchCoroutine;
     private GameObject cachedTarget;
     private Vector2 currentWalkDirection = Vector2.right;
     private float lastPatrolChangeTime;
@@ -103,6 +105,7 @@ public class AntlionLarva : MonoBehaviour
     private bool canDamage = true;
     private float lastDamageTime;
     private bool hasHitThisDash = false;
+    private bool isCleaningUp = false;
 
     private void Start()
     {
@@ -129,14 +132,13 @@ public class AntlionLarva : MonoBehaviour
 
     private void Update()
     {
-        if (isDead) return;
+        if (isDead || isCleaningUp) return;
         if (isJumpingBack) return;
-        if (isAttacking || isDashing || isStunned || isSearchingForGround || isUnderground)
-            return;
+        if (isAttacking || isDashing || isStunned || isSearchingForGround || isUnderground) return;
 
         if (!IsOnValidGround())
         {
-            StartCoroutine(SearchForGroundRoutine());
+            SafeStartCoroutine(SearchForGroundRoutine(), ref currentSearchCoroutine);
             return;
         }
 
@@ -159,12 +161,11 @@ public class AntlionLarva : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (isDead || isCleaningUp) return;
         UpdateAnimation();
 
         if (isDashing && !hasHitThisDash)
-        {
             DetectDashHits();
-        }
     }
 
     private void InitializeModules()
@@ -194,7 +195,7 @@ public class AntlionLarva : MonoBehaviour
 
     public void KnockBack(KnockbackData data)
     {
-        if (isStunned || isDead) return;
+        if (isStunned || isDead || isCleaningUp) return;
         if (isUnderground) ForceEmergenceFromKnockback();
 
         rb.AddForce(data.Direction * data.Force, ForceMode2D.Impulse);
@@ -205,52 +206,62 @@ public class AntlionLarva : MonoBehaviour
     {
         if (isDead) return;
         isDead = true;
-
-        ResetEnemyState();
-
-        if (currentDashCoroutine != null)
-            StopCoroutine(currentDashCoroutine);
-        if (currentJumpBackCoroutine != null)
-            StopCoroutine(currentJumpBackCoroutine);
-
+        StopAllCoroutines();
         StartCoroutine(DeathSequence());
     }
 
     private IEnumerator DeathSequence()
     {
+        isCleaningUp = true;
+        rb.linearVelocity = Vector2.zero;
+        isAttacking = false;
+        isDashing = false;
+        isStunned = false;
+        isSearchingForGround = false;
+        isUnderground = false;
+        isJumpingBack = false;
+
+        if (isUnderground)
+        {
+            ForceEmergenceFromKnockback();
+            yield return new WaitForSeconds(0.1f);
+        }
+
         if (!IsOnValidGround() || Mathf.Abs(rb.linearVelocity.y) > 0.1f)
         {
-            yield return new WaitUntil(() => IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f);
+            yield return new WaitUntil(() => Mathf.Abs(rb.linearVelocity.y) < 0.1f);
             yield return new WaitForSeconds(0.1f);
         }
 
         rb.linearVelocity = Vector2.zero;
         rb.bodyType = RigidbodyType2D.Kinematic;
 
-        if (enemyCollider != null)
-            enemyCollider.enabled = false;
-
-        if (enemyModule != null)
-            enemyModule.enabled = false;
+        if (enemyCollider != null) enemyCollider.enabled = false;
+        if (enemyModule != null) enemyModule.enabled = false;
 
         if (animator != null)
+        {
             animator.SetBool(DeathHash, true);
+            animator.SetBool(BurrowHash, false);
+            animator.SetBool(JumpOutHash, false);
+            animator.SetBool(PeakOutHash, false);
+            animator.SetFloat(SpeedHash, 0f);
+        }
 
         yield return new WaitForSeconds(2f);
+        isCleaningUp = false;
         Destroy(gameObject);
     }
 
     private void ForceEmergenceFromKnockback()
     {
         isUnderground = false;
-
         if (spriteRenderer != null)
         {
             Color c = spriteRenderer.color;
             c.a = 1f;
             spriteRenderer.color = c;
         }
-
         transform.localScale = Vector3.one;
         transform.position = new Vector3(transform.position.x, surfacePosition.y, transform.position.z);
         rb.gravityScale = originalGravityScale;
@@ -263,15 +274,13 @@ public class AntlionLarva : MonoBehaviour
         isStunned = true;
         ResetEnemyState();
         yield return new WaitForSeconds(knockbackDuration);
-        if (IsOnValidGround()) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+        if (!isDead && IsOnValidGround()) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
         isStunned = false;
     }
 
     private void HandleHealthChanged(float currentHealth, float maxHealth)
     {
-        if (isDead) return;
-
-        StartCoroutine(FlashColor(Color.red));
+        if (isDead || isCleaningUp) return;
         if (isUnderground)
         {
             if (currentDashCoroutine != null)
@@ -282,25 +291,16 @@ public class AntlionLarva : MonoBehaviour
 
             if (isDashing)
             {
-                StartCoroutine(JumpBackWithRecovery());
+                SafeStartCoroutine(JumpBackWithRecovery(), ref currentJumpBackCoroutine);
             }
-
             isDashing = false;
-        }
-    }
-
-    IEnumerator FlashColor(Color color)
-    {
-        if (spriteRenderer != null && spriteRenderer.color.a > 0.5f)
-        {
-            spriteRenderer.color = color;
-            yield return new WaitForSeconds(0.1f);
-            spriteRenderer.color = originalColor;
         }
     }
 
     private void ResetEnemyState()
     {
+        if (isDead) return;
+
         isAttacking = false;
         isDashing = false;
         isSearchingForGround = false;
@@ -330,34 +330,41 @@ public class AntlionLarva : MonoBehaviour
 
     private void HandleTargetDetected(GameObject target)
     {
-        if (cachedTarget == null)
+        if (cachedTarget == null && !isDead)
             cachedTarget = target;
     }
 
     private void HandleStartAttack()
     {
-        if (isDead || !isAttacking && !isStunned && !isSearchingForGround && !isUnderground && IsOnValidGround() && cachedTarget != null)
+        if (isDead || isCleaningUp || isAttacking || isStunned || isSearchingForGround || isUnderground || !IsOnValidGround())
+            return;
+
+        if (!IsTargetValid())
         {
-            float distanceToPlayer = Vector3.Distance(transform.position, cachedTarget.transform.position);
-            if (distanceToPlayer <= attackRadius)
-                StartCoroutine(PerformAttack());
+            cachedTarget = null;
+            return;
         }
+
+        float distanceToPlayer = Vector3.Distance(transform.position, cachedTarget.transform.position);
+        if (distanceToPlayer <= attackRadius)
+            SafeStartCoroutine(PerformAttack(), ref currentAttackCoroutine);
     }
 
     private void HandleMovement()
     {
-        if (cachedTarget != null && !isStunned) ChasePlayer();
-        else Patrol();
+        if (IsTargetValid() && !isStunned)
+            ChasePlayer();
+        else
+            Patrol();
     }
 
     private void ChasePlayer()
     {
-        if (cachedTarget == null) return;
+        if (!IsTargetValid()) return;
 
         Vector2 direction = (cachedTarget.transform.position - transform.position).normalized;
         Vector2 moveDirection = new Vector2(direction.x, 0f).normalized;
         rb.linearVelocity = new Vector2(moveDirection.x * chaseSpeed, rb.linearVelocity.y);
-
         transform.localScale = moveDirection.x > 0 ? new Vector3(1, 1, 1) : new Vector3(-1, 1, 1);
     }
 
@@ -374,14 +381,14 @@ public class AntlionLarva : MonoBehaviour
 
     private bool IsOnValidGround()
     {
-        if (groundCheckPoint == null) return false;
+        if (groundCheckPoint == null || isDead) return false;
         RaycastHit2D hit = Physics2D.Raycast(groundCheckPoint.position, Vector2.down, groundCheckDistance, groundLayer);
         return hit.collider != null;
     }
 
     private IEnumerator SearchForGroundRoutine()
     {
-        if (isSearchingForGround) yield break;
+        if (isSearchingForGround || isDead) yield break;
         isSearchingForGround = true;
         rb.linearVelocity = Vector2.zero;
 
@@ -390,7 +397,7 @@ public class AntlionLarva : MonoBehaviour
         Vector2 randomDirection = Random.insideUnitCircle.normalized;
         randomDirection.y = 0;
 
-        while (searchTime < maxSearchTime && !IsOnValidGround())
+        while (searchTime < maxSearchTime && !IsOnValidGround() && !isDead)
         {
             searchTime += Time.deltaTime;
             if (searchTime % 1f < Time.deltaTime)
@@ -402,12 +409,19 @@ public class AntlionLarva : MonoBehaviour
             yield return null;
         }
 
-        rb.linearVelocity = Vector2.zero;
-        isSearchingForGround = false;
+        if (!isDead)
+        {
+            rb.linearVelocity = Vector2.zero;
+            isSearchingForGround = false;
+        }
+        currentSearchCoroutine = null;
     }
 
     private void OnDestroy()
     {
+        isCleaningUp = true;
+        StopAllCoroutines();
+
         if (enemyModule != null)
         {
             enemyModule.OnStartAttack -= HandleStartAttack;
@@ -423,52 +437,19 @@ public class AntlionLarva : MonoBehaviour
 
     private void DetectDashHits()
     {
-        if (!canDamage || !isDashing || hasHitThisDash || cachedTarget == null) return;
+        if (!canDamage || !isDashing || hasHitThisDash || !IsTargetValid()) return;
 
         Vector2 dashDirection = GetDashDirection();
         Vector2 detectionOrigin = GetDashDetectionOrigin();
-        Vector2 detectionSize = GetDashDetectionSize();
 
-        RaycastHit2D[] boxHits = Physics2D.BoxCastAll(detectionOrigin, detectionSize, 0f, dashDirection, dashDetectionDistance, playerLayer);
-        RaycastHit2D[] rayHits = PerformDashRaycasts(detectionOrigin, detectionSize, dashDirection);
+        RaycastHit2D hit = Physics2D.Raycast(detectionOrigin, dashDirection, dashDetectionDistance, playerLayer);
 
-        ProcessDashHits(boxHits);
-        ProcessDashHits(rayHits);
-    }
-
-    private RaycastHit2D[] PerformDashRaycasts(Vector2 origin, Vector2 size, Vector2 direction)
-    {
-        System.Collections.Generic.List<RaycastHit2D> allHits = new System.Collections.Generic.List<RaycastHit2D>();
-
-        float spacing = size.y / (dashDetectionRays - 1);
-        Vector2 perpendicular = Vector2.up;
-
-        for (int i = 0; i < dashDetectionRays; i++)
+        if (hit.collider != null && !hasHitThisDash && hit.transform.gameObject.layer != LayerMask.NameToLayer("Ignore"))
         {
-            Vector2 rayOrigin = origin + perpendicular * (i * spacing - size.y / 2);
-            RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, direction, dashDetectionDistance, playerLayer);
-            allHits.AddRange(hits);
-
-            Debug.DrawRay(rayOrigin, direction * dashDetectionDistance, Color.magenta, 0.1f);
-        }
-
-        return allHits.ToArray();
-    }
-
-    private void ProcessDashHits(RaycastHit2D[] hits)
-    {
-        if (hasHitThisDash) return;
-
-        foreach (RaycastHit2D hit in hits)
-        {
-            if (hit.collider != null && !hasHitThisDash && hit.transform.gameObject.layer != LayerMask.NameToLayer("Ignore"))
+            HealthModule playerHealth = hit.collider.GetComponent<HealthModule>();
+            if (playerHealth != null && hit.collider.gameObject == cachedTarget)
             {
-                HealthModule playerHealth = hit.collider.GetComponent<HealthModule>();
-                if (playerHealth != null && hit.collider.gameObject == cachedTarget)
-                {
-                    ProcessDashHit(playerHealth, hit.point);
-                    break;
-                }
+                ProcessDashHit(playerHealth, hit.point);
             }
         }
     }
@@ -486,15 +467,12 @@ public class AntlionLarva : MonoBehaviour
         }
 
         isDashing = false;
-
-        if (currentJumpBackCoroutine != null)
-            StopCoroutine(currentJumpBackCoroutine);
-        currentJumpBackCoroutine = StartCoroutine(JumpBackWithRecovery());
+        SafeStartCoroutine(JumpBackWithRecovery(), ref currentJumpBackCoroutine);
     }
 
     private Vector2 GetDashDirection()
     {
-        if (cachedTarget == null) return Vector2.right;
+        if (!IsTargetValid()) return Vector2.right;
         Vector2 direction = (cachedTarget.transform.position - transform.position).normalized;
         return new Vector2(direction.x, 0f).normalized;
     }
@@ -506,11 +484,6 @@ public class AntlionLarva : MonoBehaviour
         return baseOrigin + dashDirection * (dashDetectionDistance * 0.3f);
     }
 
-    private Vector2 GetDashDetectionSize()
-    {
-        return new Vector2(dashAttackWidth, dashAttackHeight);
-    }
-
     private IEnumerator DamageCooldown()
     {
         canDamage = false;
@@ -520,74 +493,97 @@ public class AntlionLarva : MonoBehaviour
 
     private IEnumerator JumpBackWithRecovery()
     {
+        if (isDead || !IsTargetValid())
+        {
+            isJumpingBack = false;
+            yield break;
+        }
+
         isJumpingBack = true;
         rb.gravityScale = originalGravityScale;
         Vector2 bounceDirection = (transform.position - cachedTarget.transform.position).normalized;
-        bounceDirection = bounceDirection.normalized;
         rb.linearVelocity = new Vector2(bounceDirection.x * bounceBackForceX, bounceBackForceY);
 
         float recoveryTimer = 0f;
         bool hasLanded = false;
 
-        while (recoveryTimer < bounceRecoveryTime && !hasLanded)
+        while (recoveryTimer < bounceRecoveryTime && !hasLanded && !isDead)
         {
             recoveryTimer += Time.deltaTime;
-
-            if (IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f)
-            {
-                hasLanded = true;
-            }
-
+            if (IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f) hasLanded = true;
             yield return null;
         }
 
-        if (!hasLanded)
+        if (!isDead)
         {
-            yield return new WaitUntil(() => IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f);
+            if (!hasLanded) yield return new WaitUntil(() => IsOnValidGround() && Mathf.Abs(rb.linearVelocity.y) < 0.1f || isDead);
+            if (!isDead)
+            {
+                yield return new WaitForSeconds(0.1f);
+                rb.linearVelocity = Vector2.zero;
+                isJumpingBack = false;
+                isAttacking = false;
+            }
         }
-
-        yield return new WaitForSeconds(0.1f);
-
-        rb.linearVelocity = Vector2.zero;
-        isJumpingBack = false;
-        isAttacking = false;
 
         currentJumpBackCoroutine = null;
     }
 
     private IEnumerator PerformAttack()
     {
-        if (cachedTarget == null) yield break;
+        if (!IsTargetValid())
+        {
+            isAttacking = false;
+            yield break;
+        }
 
         isAttacking = true;
         lastAttackTime = Time.time;
         rb.linearVelocity = Vector2.zero;
         yield return new WaitForSeconds(0.3f);
 
-        if (cachedTarget == null || isStunned) { ResetEnemyState(); yield break; }
+        if (!IsTargetValid() || isStunned || isDead)
+        {
+            ResetEnemyState();
+            yield break;
+        }
+
         yield return StartCoroutine(BurrowUnderground());
-        if (isStunned) { ResetEnemyState(); yield break; }
+        if (isStunned || isDead || !IsTargetValid())
+        {
+            ResetEnemyState();
+            yield break;
+        }
+
         yield return StartCoroutine(MoveUndergroundBehindPlayer(undergroundDuration));
-        if (isStunned) { ResetEnemyState(); yield break; }
+        if (isStunned || isDead || !IsTargetValid())
+        {
+            ResetEnemyState();
+            yield break;
+        }
+
         yield return StartCoroutine(EmergeFromGround());
-        if (isStunned) { ResetEnemyState(); yield break; }
+        if (isStunned || isDead || !IsTargetValid())
+        {
+            ResetEnemyState();
+            yield break;
+        }
 
         hasHitThisDash = false;
-        currentDashCoroutine = StartCoroutine(DashTowardTarget());
+        SafeStartCoroutine(DashTowardTarget(), ref currentDashCoroutine);
         yield return currentDashCoroutine;
         currentDashCoroutine = null;
 
-        if (!hasHitThisDash)
-        {
-            yield return new WaitForSeconds(0.5f);
-            isAttacking = false;
-        }
+        if (!isDead && !hasHitThisDash) yield return new WaitForSeconds(0.5f);
+        isAttacking = false;
+        currentAttackCoroutine = null;
     }
 
     private IEnumerator BurrowUnderground()
     {
-        isUnderground = true;
+        if (isDead) yield break;
 
+        isUnderground = true;
         surfacePosition = transform.position;
         if (enemyCollider != null) enemyCollider.enabled = false;
         rb.gravityScale = 0;
@@ -596,7 +592,8 @@ public class AntlionLarva : MonoBehaviour
         Vector3 undergroundPos = transform.position - new Vector3(0, burrowDepth, 0);
         float elapsed = 0f;
         if (healthModule != null) healthModule.invincible = true;
-        while (elapsed < burrowInDuration && !isStunned)
+
+        while (elapsed < burrowInDuration && !isStunned && !isDead)
         {
             elapsed += Time.deltaTime;
             float progress = elapsed / burrowInDuration;
@@ -606,7 +603,7 @@ public class AntlionLarva : MonoBehaviour
             yield return null;
         }
 
-        if (spriteRenderer != null)
+        if (!isDead && spriteRenderer != null)
         {
             Color c = spriteRenderer.color;
             c.a = 0f;
@@ -617,7 +614,7 @@ public class AntlionLarva : MonoBehaviour
     private IEnumerator MoveUndergroundBehindPlayer(float movementDuration)
     {
         float startTime = Time.time;
-        while (Time.time - startTime < movementDuration && cachedTarget != null && !isStunned)
+        while (Time.time - startTime < movementDuration && IsTargetValid() && !isStunned && !isDead)
         {
             Vector3 dirToPlayer = (cachedTarget.transform.position - transform.position).normalized;
             Vector3 targetPos = cachedTarget.transform.position - dirToPlayer * behindOffset;
@@ -629,6 +626,8 @@ public class AntlionLarva : MonoBehaviour
 
     private IEnumerator EmergeFromGround()
     {
+        if (isDead) yield break;
+
         if (spriteRenderer != null)
         {
             Color c = spriteRenderer.color;
@@ -648,19 +647,20 @@ public class AntlionLarva : MonoBehaviour
         Transform player = FindAnyObjectByType<PlayerMovement>()?.transform;
 
         peakOut = true;
-        while (elapsed < emergeTime && !isStunned)
+        while (elapsed < emergeTime && !isStunned && !isDead)
         {
             elapsed += Time.deltaTime;
             float progress = elapsed / emergeTime;
             transform.position = Vector3.Lerp(undergroundPosition, peekPosition, progress);
             float scale = Mathf.Lerp(0.8f, 0.9f, progress);
 
-            if (player != null)
-                lastFacingDir = (player.position.x > transform.position.x) ? -1 : 1;
+            if (player != null) lastFacingDir = (player.position.x > transform.position.x) ? -1 : 1;
 
             transform.localScale = new Vector3(scale * lastFacingDir, scale, 1f);
             yield return null;
         }
+
+        if (isDead) yield break;
 
         transform.position = peekPosition;
         yield return new WaitForSeconds(peekPause);
@@ -668,52 +668,55 @@ public class AntlionLarva : MonoBehaviour
 
         elapsed = 0f;
         Vector3 dipPosition = new Vector3(transform.position.x, surfacePosition.y - 0.8f, transform.position.z);
-        while (elapsed < dipTime && !isStunned)
+        while (elapsed < dipTime && !isStunned && !isDead)
         {
             elapsed += Time.deltaTime;
             float progress = elapsed / dipTime;
             transform.position = Vector3.Lerp(peekPosition, dipPosition, progress);
             float scale = Mathf.Lerp(0.9f, 0.8f, progress);
 
-            if (player != null)
-                lastFacingDir = (player.position.x > transform.position.x) ? -1 : 1;
+            if (player != null) lastFacingDir = (player.position.x > transform.position.x) ? -1 : 1;
 
             transform.localScale = new Vector3(scale * lastFacingDir, scale, 1f);
             yield return null;
         }
 
+        if (isDead) yield break;
+
         jumpOut = true;
         yield return new WaitForSeconds(1.03f);
 
         elapsed = 0f;
-        while (elapsed < emergeTime && !isStunned)
+        while (elapsed < emergeTime && !isStunned && !isDead)
         {
             elapsed += Time.deltaTime;
             float progress = elapsed / emergeTime;
             transform.position = Vector3.Lerp(dipPosition, targetSurfacePosition, progress);
             float scale = Mathf.Lerp(0.8f, 1f, progress);
 
-            if (player != null)
-                lastFacingDir = (player.position.x > transform.position.x) ? -1 : 1;
+            if (player != null) lastFacingDir = (player.position.x > transform.position.x) ? -1 : 1;
 
             transform.localScale = new Vector3(scale * lastFacingDir, scale, 1f);
             yield return null;
         }
 
-        transform.position = targetSurfacePosition;
-        rb.gravityScale = originalGravityScale;
-        if (enemyCollider != null) enemyCollider.enabled = true;
-        if (healthModule != null) healthModule.invincible = false;
-        isUnderground = false;
-        rb.linearVelocity = new Vector2(0, emergeJumpForce);
-        yield return new WaitForSeconds(0.5f);
+        if (!isDead)
+        {
+            transform.position = targetSurfacePosition;
+            rb.gravityScale = originalGravityScale;
+            if (enemyCollider != null) enemyCollider.enabled = true;
+            if (healthModule != null) healthModule.invincible = false;
+            isUnderground = false;
+            rb.linearVelocity = new Vector2(0, emergeJumpForce);
+            yield return new WaitForSeconds(0.5f);
 
-        jumpOut = false;
+            jumpOut = false;
+        }
     }
 
     private void UpdateAnimation()
     {
-        if (animator == null) return;
+        if (animator == null || isDead) return;
         animator.SetFloat(SpeedHash, Mathf.Abs(rb.linearVelocity.x));
         animator.SetBool(BurrowHash, isUnderground);
         animator.SetBool(JumpOutHash, jumpOut);
@@ -722,7 +725,11 @@ public class AntlionLarva : MonoBehaviour
 
     private IEnumerator DashTowardTarget()
     {
-        if (cachedTarget == null || isStunned) { isDashing = false; yield break; }
+        if (!IsTargetValid() || isStunned || isDead)
+        {
+            isDashing = false;
+            yield break;
+        }
 
         isDashing = true;
         float currentGravity = rb.gravityScale;
@@ -730,28 +737,43 @@ public class AntlionLarva : MonoBehaviour
         Vector2 dashDirection = (cachedTarget.transform.position - transform.position).normalized;
         float dashEndTime = Time.time + dashDuration;
 
-        while (Time.time < dashEndTime && !isStunned && isDashing)
+        while (Time.time < dashEndTime && !isStunned && isDashing && !isDead && IsTargetValid())
         {
             rb.linearVelocity = dashDirection * dashSpeed;
             yield return null;
         }
 
-        rb.gravityScale = currentGravity;
-        rb.linearVelocity = Vector2.zero;
-        isDashing = false;
-        hasHitThisDash = false;
+        if (!isDead)
+        {
+            rb.gravityScale = currentGravity;
+            rb.linearVelocity = Vector2.zero;
+            isDashing = false;
+            hasHitThisDash = false;
+        }
+        currentDashCoroutine = null;
+    }
+
+    private void SafeStartCoroutine(IEnumerator coroutine, ref Coroutine storedCoroutine)
+    {
+        if (isDead || isCleaningUp) return;
+        if (storedCoroutine != null)
+            StopCoroutine(storedCoroutine);
+        storedCoroutine = StartCoroutine(coroutine);
+    }
+
+    private bool IsTargetValid()
+    {
+        return cachedTarget != null && cachedTarget.activeInHierarchy;
     }
 
     private void OnDrawGizmosSelected()
     {
-        if (isDashing)
+        if (isDashing && !isDead)
         {
             Gizmos.color = Color.magenta;
             Vector2 origin = GetDashDetectionOrigin();
-            Vector2 size = GetDashDetectionSize();
             Vector2 direction = GetDashDirection();
-
-            Gizmos.DrawWireCube(origin + direction * (dashDetectionDistance * 0.5f), size);
+            Gizmos.DrawRay(origin, direction * dashDetectionDistance);
         }
     }
 }

@@ -1,4 +1,4 @@
-// CrackedNut.cs
+
 using UnityEngine;
 
 public class CrackedNut : MonoBehaviour
@@ -22,7 +22,6 @@ public class CrackedNut : MonoBehaviour
 
     void BreakNut()
     {
-        // 70% chance for healing, 30% for energy
         if (Random.Range(0, 100) < 70)
         {
             Instantiate(healingSeedPrefab, transform.position, Quaternion.identity);
@@ -34,8 +33,6 @@ public class CrackedNut : MonoBehaviour
         Destroy(gameObject);
     }
 }
-
-// NovaEffect.cs
 public class NovaEffect : MonoBehaviour
 {
     private float maxRadius;
@@ -55,7 +52,6 @@ public class NovaEffect : MonoBehaviour
         timer += Time.deltaTime;
         currentRadius = Mathf.Lerp(0f, maxRadius, timer / expandTime);
 
-        // Check for player collision
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, currentRadius);
         foreach (var hit in hits)
         {

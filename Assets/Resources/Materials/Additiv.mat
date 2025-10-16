@@ -72,8 +72,8 @@ Material:
     - _LightingEnabled: 0
     - _Mode: 4
     - _SoftParticlesEnabled: 0
-    - _SoftParticlesFarFadeDistance: 1
-    - _SoftParticlesNearFadeDistance: 0
+    - _SoftParticlesFarFadeDistance: 4.11
+    - _SoftParticlesNearFadeDistance: 3.78
     - _SrcBlend: 5
     - _ZWrite: 0
     m_Colors:
