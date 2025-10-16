@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -14,6 +16,21 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private float hitFreezeDuration = 0.1f;
     [SerializeField] private float timeScaleDuringFreeze = 0.01f;
 
+
+    [Header("UI")]
+
+    public List<Sprite> stages = new();
+    public List<Sprite> stage3 = new();
+    public List<Sprite> stage2 = new();
+    public List<Sprite> stage1 = new();
+    public List<Sprite> stage0 = new();
+
+    public float rotationSpeed = 5f;
+    public int currentFrame = 0;
+    public Animator uiAnimator;
+    public Image healthImage;
+
+    private static readonly int HealthHash = Animator.StringToHash("Health");
     void Start()
     {
         InitializeComponents();
@@ -43,17 +60,17 @@ public class PlayerHealth : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(hitFreezeDuration);
 
-        // Restore normal time
         Time.timeScale = 1f;
     }
 
     void OnHealthChanged(float newCurrent, float max)
     {
-        Debug.Log($"Current Health: {newCurrent}hp, Max Health: {max}hp");
+        UpdateUI(newCurrent);
+
+        uiAnimator.SetFloat(HealthHash, newCurrent);
 
         if (newCurrent < currentHealth)
         {
-            Debug.Log("Player has taken damage!");
 
             StartCoroutine(FlashColor(Color.red));
             StartCoroutine(HitFreeze()); 
@@ -65,10 +82,56 @@ public class PlayerHealth : MonoBehaviour
         }
         else
         {
-            Debug.Log("Player has healed");
             StartCoroutine(FlashColor(Color.green));
         }
 
         currentHealth = newCurrent;
     }
+
+    void UpdateUI(float newHP)
+    {
+        if (newHP > 30)
+        {
+            int index = Mathf.Clamp((int)(newHP / 10), 0, stages.Count - 1);
+            healthImage.sprite = stages[index];
+            StopAllCoroutines();
+        }
+        else
+        {
+            List<Sprite> lowHPList = null;
+            bool singleCycle = false;
+
+            if (newHP <= 30 && newHP > 20) lowHPList = stage3;
+            else if (newHP <= 20 && newHP > 10) lowHPList = stage2;
+            else if (newHP <= 10 && newHP > 5) lowHPList = stage1;
+            else
+            {
+                lowHPList = stage0;
+                singleCycle = true; 
+            }
+
+            StopAllCoroutines();
+            StartCoroutine(CycleImages(lowHPList, singleCycle));
+        }
+    }
+
+    IEnumerator CycleImages(List<Sprite> textures, bool singleCycle = false)
+    {
+        if (textures == null || textures.Count == 0) yield break;
+
+        do
+        {
+            for (int i = 0; i < textures.Count; i++)
+            {
+                healthImage.sprite = textures[i];
+                currentFrame = i;
+                yield return new WaitForSeconds(1f / rotationSpeed);
+            }
+
+            if (singleCycle) break;
+
+        } while (!singleCycle); 
+    }
+
+
 }

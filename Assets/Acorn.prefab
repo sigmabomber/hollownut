@@ -141,11 +141,14 @@ MonoBehaviour:
     m_Bits: 8
   wallLayer:
     serializedVersion: 2
-    m_Bits: 1536
+    m_Bits: 512
   bounceMaterial: {fileID: 6200000, guid: 1e751f682c9fc854bb8acd75f0d9b75a, type: 2}
   rollMaterial: {fileID: 6200000, guid: 1e751f682c9fc854bb8acd75f0d9b75a, type: 2}
   rollingRotationSpeed: 360
   bouncingRotationSpeed: 720
+  wallCheckDistance: 0.2
+  horizontalRays: 3
+  raySpacing: 0.1
   bounce: 0
   acornStates:
   - {fileID: 5006040579224230303, guid: dccc055b4d36f5b4cb645f040a02ce03, type: 3}

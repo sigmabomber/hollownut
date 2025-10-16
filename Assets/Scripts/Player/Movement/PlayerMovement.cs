@@ -1,5 +1,8 @@
 using UnityEngine;
 using System.Collections;
+using NUnit.Framework;
+using System.Collections.Generic;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
 public class PlayerMovement : MonoBehaviour
@@ -120,6 +123,9 @@ public class PlayerMovement : MonoBehaviour
     public bool canJump = true;
 
 
+    
+
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -172,7 +178,12 @@ public class PlayerMovement : MonoBehaviour
         }
         if (jumpPressed) jumpBufferCounter = jumpBufferTime;
 
-        if (Input.GetKeyDown(dashKey) && canDash && (isGrounded || canDashInAir)) StartCoroutine(Dash());
+        if (Input.GetKeyDown(dashKey) && canDash && (isGrounded || canDashInAir)) 
+        {
+
+            SoundManager.Instance.PlaySFX("dash");
+            StartCoroutine(Dash());
+        }
 
         if (Input.GetKeyDown(upKey) && isGrounded && Mathf.Abs(horizontalInput) < 0.1f) isLookingUp = true;
         if (Input.GetKeyUp(upKey) || Mathf.Abs(horizontalInput) > 0.1f) isLookingUp = false;
@@ -198,36 +209,7 @@ public class PlayerMovement : MonoBehaviour
         else { coyoteTimeCounter -= Time.deltaTime; }
     }
 
-    private void CheckWalls()
-    {
-        bool wasOnWall = isOnWall;
-        isOnWall = false;
-        isWallSliding = false;
-        wallDirection = 0;
-
-        if (!isGrounded && horizontalInput != 0)
-        {
-            Vector2 checkDirection = Vector2.right * Mathf.Sign(horizontalInput);
-            Vector2 checkOrigin = (Vector2)transform.position + new Vector2(wallCheckOffset.x * checkDirection.x, 0);
-
-            RaycastHit2D hit1 = Physics2D.Raycast(checkOrigin, checkDirection, wallCheckDistance, groundLayer);
-            RaycastHit2D hit2 = Physics2D.Raycast(checkOrigin + Vector2.up * wallCheckHeight * 0.5f, checkDirection, wallCheckDistance, groundLayer);
-            RaycastHit2D hit3 = Physics2D.Raycast(checkOrigin + Vector2.up * wallCheckHeight, checkDirection, wallCheckDistance, groundLayer);
-
-            isOnWall = hit1.collider != null || hit2.collider != null || hit3.collider != null;
-
-            if (isOnWall)
-            {
-                wallDirection = (int)Mathf.Sign(horizontalInput);
-
-                if (rb.linearVelocity.y < 0)
-                {
-                    isWallSliding = true;
-                }
-            }
-        }
-    }
-
+   
     private void CheckFalling()
     {
         isFalling = !isGrounded && !isWallSliding && !isDashing && !isQuickDropping && rb.linearVelocity.y < 0.1f;

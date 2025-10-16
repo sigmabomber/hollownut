@@ -1,5 +1,8 @@
+using NUnit.Framework;
 using System.Collections;
 using UnityEngine;
+
+using System.Collections.Generic;
 
 public class StickAttack : MonoBehaviour
 {
@@ -44,6 +47,10 @@ public class StickAttack : MonoBehaviour
 
     private bool hasHitThisAttack = false;
 
+
+
+    public List<string> sfx = new();
+
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -78,6 +85,7 @@ public class StickAttack : MonoBehaviour
     {
         if (Input.GetKeyDown(attackKey) && !plrMovement.IsDashing() && !plrMovement.IsWallSliding() && !plrMovement.IsQuickDropping() && canAttack)
         {
+            PlaySFX();
             StartAttack();
         }
     }
@@ -301,6 +309,14 @@ public class StickAttack : MonoBehaviour
         }
     }
 
+
+    void PlaySFX()
+    {
+       string clipName = sfx[Random.Range(0, sfx.Count)];
+
+
+        SoundManager.Instance.PlaySFX(clipName);
+    }
     private void OnDrawGizmosSelected()
     {
         if (attacking)

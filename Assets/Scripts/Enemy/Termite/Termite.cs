@@ -128,7 +128,7 @@ public class Termite : MonoBehaviour
         enemyModule.OnStartAttack += StartAttackingEnemy;
 
         healthModule = GetComponent<HealthModule>();
-        healthModule.Initialize(50f);
+        healthModule.Initialize(1f);
         healthModule.onHealthChanged += HandleHealthChange;
         healthModule.onDeath += HandleDeath;
 

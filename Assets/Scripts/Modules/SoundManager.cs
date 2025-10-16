@@ -13,6 +13,10 @@ public class SoundManager : MonoBehaviour
     private Dictionary<string, AudioClip> CachedSFXClips = new();
     private Dictionary<string, AudioClip> CachedMusicClips = new();
 
+    public List<AudioClip> sfxList;
+    public List<AudioClip> musicList;
+
+
     private void Awake()
     {
         if (Instance == null)
@@ -32,8 +36,43 @@ public class SoundManager : MonoBehaviour
       
     }
 
+
+    private void Start()
+    {
+        GetMusicClips();
+        GetSFXClips();
+    }
+    private void GetMusicClips()
+    {
+        CachedMusicClips.Clear();
+
+
+        foreach (AudioClip clip in musicList)
+        {
+            CachedMusicClips.Add(clip.name, clip);
+        }
+
+
+
+
+    }
+
+    private void GetSFXClips()
+    {
+        CachedSFXClips.Clear();
+
+
+        foreach(AudioClip clip in sfxList)
+        {
+
+            CachedSFXClips.Add(clip.name, clip);
+        }
+
+    }
+
     public void PlaySFX(string sfxName)
     {
+        print(sfxName);
         if (string.IsNullOrEmpty(sfxName)) return;
 
         if (!CachedSFXClips.TryGetValue(sfxName, out AudioClip clip) || clip == null)
