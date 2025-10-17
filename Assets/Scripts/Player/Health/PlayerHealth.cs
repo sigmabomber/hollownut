@@ -26,7 +26,7 @@ public class PlayerHealth : MonoBehaviour
     public Animator uiAnimator;
     public Image healthImage;
 
-    [Header("Heartbeat & Pulse")]
+    [Header("Heartbeat and Pulse")]
     [SerializeField] private float heartbeatScaleAmount = 0.15f;
     [SerializeField] private float heartbeatDuration = 0.3f;
     [SerializeField] private float baseHeartbeatInterval = 1.2f;
@@ -82,7 +82,7 @@ public class PlayerHealth : MonoBehaviour
         {
             StartCoroutine(HitFreeze());
             StartCoroutine(DamagePulse());
-
+            SoundManager.Instance.PlaySFX("plrTakingDmg");
             if (gameObject.TryGetComponent(out IKnockback knockbackable))
             {
                 Vector2 knockbackDir = new Vector2(-transform.localScale.x, 0f);
@@ -145,6 +145,8 @@ public class PlayerHealth : MonoBehaviour
             if (singleCycle) break;
         } while (!singleCycle);
     }
+
+
 
     void StartHeartbeat()
     {

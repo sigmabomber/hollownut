@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 26eb2edee14d4284e815181b2e7b54d5
+guid: 9af7da593ca8c0f4eb0b7adc1699b48e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8804631856009553178
-    second: 408be4a4b9d5-1.png_0
+      213: 4378361604734918156
+    second: Hat finished-7.png_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 16
+  spritePixelsToUnits: 10
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -100,7 +100,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: 408be4a4b9d5-1.png_0
+      name: Hat finished-7.png_0
       rect:
         serializedVersion: 2
         x: 0
@@ -108,15 +108,15 @@ TextureImporter:
         width: 32
         height: 32
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 6ea5674d9f9afc580800000000000000
-      internalID: -8804631856009553178
+      spriteID: c0e1f649ea013cc30800000000000000
+      internalID: 4378361604734918156
       vertices: []
       indices: 
       edges: []
@@ -125,7 +125,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: a8be9b6a360eb5e44b5051c82baf2689
     internalID: 0
     vertices: []
     indices: 
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      408be4a4b9d5-1.png_0: -8804631856009553178
+      Hat finished-7.png_0: 4378361604734918156
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

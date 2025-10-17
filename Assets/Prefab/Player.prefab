@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 879695094100165074}
   - component: {fileID: 8239739907952005366}
   - component: {fileID: -7728211178541158291}
+  - component: {fileID: 3934005791781461834}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -221,6 +222,7 @@ MonoBehaviour:
   wallCheckHeight: 0.8
   animationSmoothSpeed: 8
   currentAnimSpeed: 0
+  canAnimate: 1
   inputSmoothSpeed: 5
   canMove: 1
   canJump: 1
@@ -260,6 +262,51 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hitFreezeDuration: 0.1
   timeScaleDuringFreeze: 0.01
+  stages:
+  - {fileID: -4867009734684838567, guid: b191987586b43dd4388eaef6cc781c96, type: 3}
+  - {fileID: -4867009734684838567, guid: b191987586b43dd4388eaef6cc781c96, type: 3}
+  - {fileID: 6863669179646700393, guid: d67c5eb5c8e36524aa1791bb5511f931, type: 3}
+  - {fileID: 8585005862487750895, guid: 0dfdea33ac24fc1439c5525e0b20d6fa, type: 3}
+  - {fileID: 3321168762298810284, guid: 6c786162dbe553a4aaae278059c0864e, type: 3}
+  - {fileID: 3218646305315224689, guid: ca4b6b672a1899648848bb7a9bd0a8d7, type: 3}
+  - {fileID: -4966235490143939740, guid: 5d33a209839c5024389957376f3e7b7b, type: 3}
+  - {fileID: 7093833179672854534, guid: bbdeb81acadfa854aa003cc61134b400, type: 3}
+  - {fileID: 6001033368119312567, guid: b76e296b1fa893a4a95e4285335cf56a, type: 3}
+  - {fileID: -3360794148577929732, guid: 64e36458c69847c488291d6aef2652c7, type: 3}
+  - {fileID: -2935887462452727124, guid: 2591a5ce3e4de994983b4e7cb025e4f0, type: 3}
+  stage3:
+  - {fileID: 3321168762298810284, guid: 6c786162dbe553a4aaae278059c0864e, type: 3}
+  - {fileID: 4798137553053513489, guid: 5c5d47164802aa649b0b81dffbc1b524, type: 3}
+  - {fileID: -2625791750995454873, guid: 6719de835eec2564da13db94cb2656a8, type: 3}
+  - {fileID: 9207516944216877367, guid: 448870ada5b88f04ab4db1a5071aefe2, type: 3}
+  stage2:
+  - {fileID: 8585005862487750895, guid: 0dfdea33ac24fc1439c5525e0b20d6fa, type: 3}
+  - {fileID: -5506886839857441281, guid: 95a04070221a3e6489808572489f0f07, type: 3}
+  - {fileID: -250711387181678452, guid: d9f645531dcdda849b0250c97cd0979b, type: 3}
+  - {fileID: -5199275494182977050, guid: 13ce60b116c51044ab7f1978fb732e6f, type: 3}
+  stage1:
+  - {fileID: 6863669179646700393, guid: d67c5eb5c8e36524aa1791bb5511f931, type: 3}
+  - {fileID: -5779641092526602824, guid: 381a64307dbafea4f8daa13f3e29da15, type: 3}
+  - {fileID: -8418682204017184771, guid: cd71db4ec74e33142aee93ea43283bba, type: 3}
+  - {fileID: -2221930017328395964, guid: 2cef9714acfe5524e9bbd1be11bb9599, type: 3}
+  stage0:
+  - {fileID: -4867009734684838567, guid: b191987586b43dd4388eaef6cc781c96, type: 3}
+  - {fileID: 8761377544097609122, guid: d1155771a496639478a391e0d6f09436, type: 3}
+  - {fileID: 3535368274513484689, guid: efe7af5a69b1b4a45af0307898be377a, type: 3}
+  - {fileID: 6513248199720672421, guid: c7ae0ff350a7c344ca2cf4f04928b9ca, type: 3}
+  rotationSpeed: 5
+  currentFrame: 0
+  uiAnimator: {fileID: 0}
+  healthImage: {fileID: 0}
+  heartbeatScaleAmount: 0.3
+  heartbeatDuration: 0.3
+  baseHeartbeatInterval: 1.2
+  fastestHeartbeatInterval: 0.3
+  damageShakeAmount: 15
+  damagePulseScale: 0.3
+  damagePulseDuration: 0.15
+  healPulseScale: 0.2
+  healPulseDuration: 0.2
 --- !u!114 &879695094100165074
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -273,6 +320,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentHealth: 0
+  whiteMaterial: {fileID: 0}
+  defaultMaterial: {fileID: 0}
   invincible: 0
 --- !u!114 &8239739907952005366
 MonoBehaviour:
@@ -304,6 +353,10 @@ MonoBehaviour:
   obstacleLayers:
     serializedVersion: 2
     m_Bits: 0
+  sfx:
+  - plrSwing1
+  - plrSwing2
+  - plrSwing3
 --- !u!114 &-7728211178541158291
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -316,6 +369,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0946be9e01b5f47439bb268ee051907d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SoundManager
+  sfxList:
+  - {fileID: 8300000, guid: 9e332c0ddb44e3d43bfbe7acacd4c517, type: 3}
+  - {fileID: 8300000, guid: f4c54c6eb1e9f23489a719617de39a64, type: 3}
+  - {fileID: 8300000, guid: 31aeece3f910c8c4b9e5e8ffa4f37eed, type: 3}
+  - {fileID: 8300000, guid: 6d19c1a4a6cf5754ab42c6a67c127bf4, type: 3}
+  - {fileID: 8300000, guid: 26c1a980b2b06e945bec6854c145efeb, type: 3}
+  - {fileID: 8300000, guid: 51e8f0bbdc695b448933465b0c5eb757, type: 3}
+  - {fileID: 8300000, guid: e0207a22a36dde54e975e158a724862c, type: 3}
+  - {fileID: 8300000, guid: 7d1edbd14f10f4048878ff779474e1cf, type: 3}
+  - {fileID: 8300000, guid: 2d8238cf470bb4440bfbad698aa6094d, type: 3}
+  - {fileID: 8300000, guid: 0f7def24997d1384fa29d091004067c9, type: 3}
+  - {fileID: 8300000, guid: 5f055011b486e4945b59d808b015e960, type: 3}
+  - {fileID: 8300000, guid: 70944422657d75345b5c78bc2e2121db, type: 3}
+  musicList: []
+--- !u!114 &3934005791781461834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3037404343529050380}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c16fb61b365d45a40841767e1f4422e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Respawn
+  defaultCheckPoint: {fileID: 0}
+  respawnUI: {fileID: 0}
 --- !u!1 &7599228901470736001
 GameObject:
   m_ObjectHideFlags: 0
@@ -374,7 +455,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f4925502cec0ad84ca4170bf18f96d18, type: 2}
+  - {fileID: 2100000, guid: f92271c0c9a833045b35151232ed9ce5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

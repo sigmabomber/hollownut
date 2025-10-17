@@ -35,7 +35,6 @@ public class Mantis : MonoBehaviour
     [Header("Defensive Mode Settings")]
     [SerializeField] private float defensiveModeThreshold = 0.4f;
     [SerializeField] private float defensiveJumpBackForce = 10f;
-    [SerializeField] private float defensiveParryChance = 0.7f;
     [SerializeField] private float defensiveStanceDuration = 2f;
     [SerializeField] private float defensiveCooldown = 1.5f;
     [SerializeField] private int defensiveMaxSlashCount = 2;
@@ -100,7 +99,6 @@ public class Mantis : MonoBehaviour
     private Coroutine flashCoroutine;
     private bool hasHitThisAttack = false;
     private bool isDashing = false;
-    private float lastPlayerAttackTime = -999f;
 
     private bool isInitialized = false;
     private List<Coroutine> activeCoroutines = new List<Coroutine>();
@@ -572,7 +570,7 @@ public class Mantis : MonoBehaviour
                     slashAnimator.SetBool(IsAttackingHash, true);
                 }
             }
-
+            SoundManager.Instance.PlaySFX("mantis_swing");
             if (animator != null)
             {
                 animator.SetTrigger(SlashTriggerHash);
@@ -798,6 +796,7 @@ public class Mantis : MonoBehaviour
                 slashAnimator.SetBool(IsAttackingHash, true);
             }
         }
+        SoundManager.Instance.PlaySFX("mantis_swing");
 
         if (animator != null)
         {
@@ -860,7 +859,7 @@ public class Mantis : MonoBehaviour
             }
 
             yield return new WaitForSeconds(0.1f);
-
+            SoundManager.Instance.PlaySFX("mantis_swing");
             hasHitThisAttack = false;
             DetectHits(slashDamage);
 
@@ -924,6 +923,8 @@ public class Mantis : MonoBehaviour
                 slashAnimator.SetBool(IsAttackingHash, true);
             }
         }
+
+        SoundManager.Instance.PlaySFX("mantis_swing");
 
         if (animator != null)
         {
@@ -1188,7 +1189,7 @@ public class Mantis : MonoBehaviour
         if (slashObj != null)
         {
             slashObj.SetActive(false);
-            if (slashAnimator != null)
+            if (slashAnimator != null && slashAnimator.gameObject.activeSelf == true)
             {
                 slashAnimator.SetBool(IsAttackingHash, false);
             }

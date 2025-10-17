@@ -699,11 +699,18 @@ public class Termite : MonoBehaviour
         healthModule.invincible = true;
 
         Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
+        HealthModule playerhealth = player.GetComponent<HealthModule>();
         if (playerRb != null)
         {
             if (EffectsModule.Instance != null)
             {
                 EffectsModule.Instance.SlowedDown(new SlowedDownData(weightToAdd, playerRb));
+
+            }
+
+            if (playerhealth != null)
+            {
+                playerhealth.TakeDamage(5);
             }
         }
 

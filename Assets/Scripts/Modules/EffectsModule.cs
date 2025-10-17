@@ -103,7 +103,6 @@ public class EffectsModule : MonoBehaviour
         if (playerMovement == null) { print("not very sigma2"); return; }
 
         playerMovement.weight += data.Weight;
-        print(playerMovement.weight);
 
         
 

@@ -106,6 +106,8 @@ public class PlayerMovement : MonoBehaviour
     private bool isLookingUp = false;
     public float currentAnimSpeed = 0f;
 
+    public bool canAnimate = true;
+
     [Header("Keycodes")]
     private KeyCode leftKey = Constants.PlayerData.PlayerControls.left;
     private KeyCode rightKey = Constants.PlayerData.PlayerControls.right;
@@ -329,7 +331,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void UpdateAnimations()
     {
-        if (animator == null) return;
+        if (animator == null || !canAnimate) return;
 
         float actualSpeed = Mathf.Abs(rb.linearVelocity.x);
         float maxSpeed = maxWalkSpeed / weight;
