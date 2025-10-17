@@ -32,10 +32,11 @@ public class HealthModule : MonoBehaviour
             Debug.LogWarning("Default material 'New Material' not found in Resources/Materials!");
     }
 
-    public virtual void Initialize(float health = 67)
+    public virtual void Initialize(float health = 67, float max = 6767)
     {
         maxHealth = health;
-        currentHealth = maxHealth;
+
+        currentHealth = max != 6767 ? max : maxHealth;
 
         onHealthChanged?.Invoke(currentHealth, maxHealth);
     }

@@ -1,7 +1,5 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,11 +7,7 @@ public class PlayerHealth : MonoBehaviour
 {
     private SpriteRenderer playerSprite;
     private HealthModule healthModule;
-    private float currentHealth;
     private Rigidbody2D rb;
-
-    [SerializeField] private float hitFreezeDuration = 0.1f;
-    [SerializeField] private float timeScaleDuringFreeze = 0.01f;
 
     [Header("UI")]
     public List<Sprite> stages = new();
@@ -21,10 +15,12 @@ public class PlayerHealth : MonoBehaviour
     public List<Sprite> stage2 = new();
     public List<Sprite> stage1 = new();
     public List<Sprite> stage0 = new();
-    public float rotationSpeed = 5f;
-    public int currentFrame = 0;
-    public Animator uiAnimator;
     public Image healthImage;
+    public float rotationSpeed = 5f;
+
+    [Header("Hit Freeze")]
+    [SerializeField] private float hitFreezeDuration = 0.1f;
+    [SerializeField] private float timeScaleDuringFreeze = 0.01f;
 
     [Header("Heartbeat and Pulse")]
     [SerializeField] private float heartbeatScaleAmount = 0.15f;
@@ -37,14 +33,24 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private float healPulseScale = 0.2f;
     [SerializeField] private float healPulseDuration = 0.2f;
 
+    private float currentHealth;
     private Vector3 originalScale;
     private Quaternion originalRotation;
     private Coroutine heartbeatCoroutine;
+
+    private PlayerData playerData;
+
     void Start()
     {
         InitializeComponents();
+
+        playerData = FindAnyObjectByType<GameManager>().CurrentPlayer;
+
+
         healthModule.Initialize(100f);
-        currentHealth = healthModule.currentHealth;
+        currentHealth = playerData.Get<float>("HP");
+        UpdateUI(playerData.Get<float>("HP"));
+
         healthModule.onHealthChanged += OnHealthChanged;
 
         originalScale = healthImage.transform.localScale;
@@ -60,20 +66,6 @@ public class PlayerHealth : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
     }
 
-    IEnumerator FlashColor(Color color)
-    {
-        playerSprite.color = color;
-        yield return new WaitForSeconds(0.1f);
-        playerSprite.color = Color.white;
-    }
-
-    IEnumerator HitFreeze()
-    {
-        Time.timeScale = timeScaleDuringFreeze;
-        yield return new WaitForSecondsRealtime(hitFreezeDuration);
-        Time.timeScale = 1f;
-    }
-
     void OnHealthChanged(float newCurrent, float max)
     {
         UpdateUI(newCurrent);
@@ -83,10 +75,6 @@ public class PlayerHealth : MonoBehaviour
             StartCoroutine(HitFreeze());
             StartCoroutine(DamagePulse());
             SoundManager.Instance.PlaySFX("plrTakingDmg");
-            if (gameObject.TryGetComponent(out IKnockback knockbackable))
-            {
-                Vector2 knockbackDir = new Vector2(-transform.localScale.x, 0f);
-            }
         }
         else
         {
@@ -95,6 +83,8 @@ public class PlayerHealth : MonoBehaviour
         }
 
         currentHealth = newCurrent;
+
+     
 
         RestartHeartbeat();
     }
@@ -112,17 +102,10 @@ public class PlayerHealth : MonoBehaviour
             List<Sprite> lowHPList = null;
             bool singleCycle = false;
 
-            if (newHP <= 30 && newHP > 20)
-                lowHPList = stage3;
-            else if (newHP <= 20 && newHP > 10)
-                lowHPList = stage2;
-            else if (newHP <= 10 && newHP > 5)
-                lowHPList = stage1;
-            else
-            {
-                lowHPList = stage0;
-                singleCycle = true;
-            }
+            if (newHP <= 30 && newHP > 20) lowHPList = stage3;
+            else if (newHP <= 20 && newHP > 10) lowHPList = stage2;
+            else if (newHP <= 10 && newHP > 5) lowHPList = stage1;
+            else { lowHPList = stage0; singleCycle = true; }
 
             StopAllCoroutines();
             StartCoroutine(CycleImages(lowHPList, singleCycle));
@@ -138,7 +121,6 @@ public class PlayerHealth : MonoBehaviour
             for (int i = 0; i < textures.Count; i++)
             {
                 healthImage.sprite = textures[i];
-                currentFrame = i;
                 yield return new WaitForSeconds(1f / rotationSpeed);
             }
 
@@ -146,7 +128,19 @@ public class PlayerHealth : MonoBehaviour
         } while (!singleCycle);
     }
 
+    IEnumerator FlashColor(Color color)
+    {
+        playerSprite.color = color;
+        yield return new WaitForSeconds(0.1f);
+        playerSprite.color = Color.white;
+    }
 
+    IEnumerator HitFreeze()
+    {
+        Time.timeScale = timeScaleDuringFreeze;
+        yield return new WaitForSecondsRealtime(hitFreezeDuration);
+        Time.timeScale = 1f;
+    }
 
     void StartHeartbeat()
     {
@@ -175,7 +169,6 @@ public class PlayerHealth : MonoBehaviour
     float GetHeartbeatInterval()
     {
         float healthPercent = currentHealth / 100f;
-
         return Mathf.Lerp(fastestHeartbeatInterval, baseHeartbeatInterval, healthPercent);
     }
 
@@ -209,9 +202,7 @@ public class PlayerHealth : MonoBehaviour
     {
         float elapsed = 0f;
         Vector3 targetScale = originalScale * (1f + damagePulseScale);
-
         float shakeElapsed = 0f;
-        float shakeDuration = damagePulseDuration;
 
         while (elapsed < damagePulseDuration)
         {

@@ -83,7 +83,7 @@ public class StickAttack : MonoBehaviour
 
     void GetInput()
     {
-        if (Input.GetKeyDown(attackKey) && !plrMovement.IsDashing() && !plrMovement.IsWallSliding() && !plrMovement.IsQuickDropping() && canAttack)
+        if (Input.GetKeyDown(attackKey) && !plrMovement.IsDashing()  && !plrMovement.IsQuickDropping() && canAttack)
         {
             PlaySFX();
             StartAttack();

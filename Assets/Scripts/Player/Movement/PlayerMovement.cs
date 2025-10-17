@@ -43,7 +43,6 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Wall State")]
     private bool isOnWall;
-    private bool isWallSliding;
     private int wallDirection;
 
     [Header("Quick Drop State")]
@@ -214,12 +213,12 @@ public class PlayerMovement : MonoBehaviour
    
     private void CheckFalling()
     {
-        isFalling = !isGrounded && !isWallSliding && !isDashing && !isQuickDropping && rb.linearVelocity.y < 0.1f;
+        isFalling = !isGrounded && !isDashing && !isQuickDropping && rb.linearVelocity.y < 0.1f;
     }
 
     private void CheckJumping()
     {
-        isJumping = !isGrounded && !isWallSliding && !isDashing && !isQuickDropping && rb.linearVelocity.y > 0.1f;
+        isJumping = !isGrounded  && !isDashing && !isQuickDropping && rb.linearVelocity.y > 0.1f;
     }
 
     private void OnLanded() { if (isQuickDropping) StopQuickDrop(); }
@@ -252,7 +251,7 @@ public class PlayerMovement : MonoBehaviour
         {
             float effectiveJumpForce = jumpForce / Mathf.Sqrt(weight);
             if (coyoteTimeCounter > 0) { PerformJump(Vector2.up * effectiveJumpForce); jumpBufferCounter = 0; coyoteTimeCounter = 0; }
-            else if (isWallSliding) { PerformWallJump(); jumpBufferCounter = 0; }
+         
             else if (airJumpsRemaining > 0) { PerformJump(Vector2.up * effectiveJumpForce); airJumpsRemaining--; jumpBufferCounter = 0; }
         }
     }
@@ -283,7 +282,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void PerformWallJump()
     {
-        isWallSliding = false;
         wallJumpLockTimer = wallJumpLockTime;
         Vector2 jumpDir = new Vector2(-wallDirection * wallJumpAngle.x, wallJumpAngle.y).normalized;
         rb.linearVelocity = Vector2.zero;
@@ -356,7 +354,6 @@ public class PlayerMovement : MonoBehaviour
 
         animator.SetFloat(SpeedHash, currentAnimSpeed);
         animator.SetBool(IsGroundedHash, isGrounded);
-        animator.SetBool(IsWallSlidingHash, isWallSliding);
         animator.SetBool(IsDashingHash, isDashing);
         animator.SetBool(IsQuickDroppingHash, isQuickDropping);
         animator.SetBool(IsFallingHash, isFalling);
@@ -386,7 +383,7 @@ public class PlayerMovement : MonoBehaviour
     public bool IsFalling() => isFalling;
     public bool IsJumping() => isJumping;
     public bool IsDashing() => isDashing;
-    public bool IsWallSliding() => isWallSliding;
+
     public bool IsQuickDropping() => isQuickDropping;
     public Vector2 GetVelocity() => rb.linearVelocity;
     public bool CanDash() => canDash;
