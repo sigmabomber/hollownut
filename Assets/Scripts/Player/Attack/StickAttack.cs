@@ -6,11 +6,11 @@ using System.Collections.Generic;
 
 public class StickAttack : MonoBehaviour
 {
-    private KeyCode attackKey = Constants.PlayerData.PlayerControls.attack;
-    private KeyCode leftKey = Constants.PlayerData.PlayerControls.left;
-    private KeyCode rightKey = Constants.PlayerData.PlayerControls.right;
-    private KeyCode upKey = Constants.PlayerData.PlayerControls.up;
-    private KeyCode downKey = Constants.PlayerData.PlayerControls.down;
+    private KeyCode attackKey;
+    private KeyCode leftKey;
+    private KeyCode rightKey;
+    private KeyCode upKey;
+    private KeyCode downKey;
 
     private PlayerMovement plrMovement;
     private Rigidbody2D rb;
@@ -56,6 +56,66 @@ public class StickAttack : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         playerAnimator = GetComponent<Animator>();
         plrMovement = GetComponent<PlayerMovement>();
+
+        StartCoroutine(GetKeybinds());
+
+    }
+
+
+    private IEnumerator GetKeybinds()
+    {
+        // Wait for GameManager to be ready
+        yield return new WaitForSeconds(1f);
+
+        GameManager.Instance.CurrentSettings.SettingsUpdated += UpdateKeybinds;
+        if (GameManager.Instance?.CurrentSettings != null)
+        {
+            Dictionary<string, KeyCode> keybinds = GameManager.Instance.CurrentSettings.GetKeybindsDictionary();
+
+            // Assign to your variables
+            attackKey = keybinds["attack"];
+            leftKey = keybinds["left"];
+            rightKey = keybinds["right"];
+            upKey = keybinds["up"];
+            downKey = keybinds["down"];
+
+            Debug.Log("Keybinds loaded successfully");
+        }
+        else
+        {
+            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
+            // Set default fallbacks
+            attackKey = KeyCode.X;
+            leftKey = KeyCode.LeftArrow;
+            rightKey = KeyCode.RightArrow;
+            upKey = KeyCode.UpArrow;
+            downKey = KeyCode.DownArrow;
+        }
+    }
+    private void UpdateKeybinds()
+    {
+        if (GameManager.Instance?.CurrentSettings != null)
+        {
+            Dictionary<string, KeyCode> keybinds = GameManager.Instance.CurrentSettings.GetKeybindsDictionary();
+
+            attackKey = keybinds["attack"];
+            leftKey = keybinds["left"];
+            rightKey = keybinds["right"];
+            upKey = keybinds["up"];
+            downKey = keybinds["down"];
+
+            Debug.Log("Keybinds loaded successfully");
+        }
+        else
+        {
+            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
+            // Set default fallbacks
+            attackKey = KeyCode.X;
+            leftKey = KeyCode.LeftArrow;
+            rightKey = KeyCode.RightArrow;
+            upKey = KeyCode.UpArrow;
+            downKey = KeyCode.DownArrow;
+        }
     }
 
     private void Update()

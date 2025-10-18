@@ -49,7 +49,7 @@ public class GameManager : MonoBehaviour
         SettingsManager.Save(CurrentSettings);
     }
 
-    async void OnApplicationQuit()
+     void OnApplicationQuit()
     {
         SaveSettings();
     }

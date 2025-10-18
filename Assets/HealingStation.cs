@@ -2,11 +2,14 @@ using UnityEngine;
 using System.Collections;
 using System.Threading.Tasks;
 using UnityEngine.SceneManagement;
+using System;
 
 public class HealingStation : MonoBehaviour
 {
     private static readonly int GoDownHash = Animator.StringToHash("GoDown");
     private static readonly int GoUpHash = Animator.StringToHash("GoUp");
+    private static readonly int SpeedHash = Animator.StringToHash("Speed");
+  
 
     [Header("References")]
     public Transform player;
@@ -19,28 +22,55 @@ public class HealingStation : MonoBehaviour
     public Vector3 goDownOffset = new Vector3(0, -0.5f, 0);
     public Vector3 localRotation = Vector3.zero;
 
-    [Header("Debug Controls")]
-    public bool goDown = false;
-    public bool goUp = false;
+
 
     private Transform follow;
     private Animator animator;
     private PlayerHealth plrHealth;
     private PlayerMovement move;
+    private Animator plrAnimator;
     private Vector3 currentOffset;
     private bool isHealing = false;
     private Coroutine currentAnimation;
+
+    public LayerMask playerLayer;
+
+    public GameObject interactionUI;
+    private BaseUI baseUI;
+    public bool canInteract = false;
+
+    private bool isInteracting = false;
 
     void Start()
     {
         InitializeComponents();
         currentOffset = defaultOffset;
+
+        if (interactionUI != null)
+        {
+
+            baseUI = interactionUI.GetComponent<BaseUI>();
+        }
     }
 
-    void Update()
+
+    private void Update()
     {
-        HandleDebugInputs();
+        if (canInteract && !isInteracting)
+        {
+
+            var keybinds = GameManager.Instance.CurrentSettings.GetKeybindsDictionary();
+         if (Input.GetKey(keybinds["interact"]))
+            {
+                isInteracting = true;
+                StartCoroutine(GoDownRoutine());
+
+                UIManager.Instance.CloseUI(baseUI);
+            }
+
+        }
     }
+
 
     void LateUpdate()
     {
@@ -49,6 +79,48 @@ public class HealingStation : MonoBehaviour
             player.localPosition = currentOffset;
             player.localRotation = Quaternion.Euler(localRotation);
         }
+    }
+
+
+    private bool CanInteract(GameObject collidingObject)
+    {
+        if ((playerLayer.value & (1 << collidingObject.layer)) == 0) return false;
+        
+
+        int currentCheckPointID = GameManager.Instance.CurrentPlayer.Get<int>("Checkpoint");
+
+       
+        
+
+        return true;
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (!CanInteract(collision.gameObject))
+        {
+          
+            return;
+        }
+
+        UIManager.Instance.OpenUI(baseUI);
+
+        canInteract = true;
+
+    }
+
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (!canInteract) return;
+        if (!CanInteract(collision.gameObject))
+        {
+
+            return;
+        }
+
+        UIManager.Instance.CloseUI(baseUI);
+
+        canInteract = false;
     }
 
     private void InitializeComponents()
@@ -62,7 +134,7 @@ public class HealingStation : MonoBehaviour
         move = player.GetComponent<PlayerMovement>();
         animator = GetComponent<Animator>();
         plrHealth = player.GetComponent<PlayerHealth>();
-
+        plrAnimator = player.GetComponent<Animator>();
         follow = transform.Find("Follow");
         if (follow == null)
         {
@@ -70,28 +142,15 @@ public class HealingStation : MonoBehaviour
         }
     }
 
-    private void HandleDebugInputs()
-    {
-        if (goDown && currentAnimation == null)
-        {
-            currentAnimation = StartCoroutine(GoDownRoutine());
-            goDown = false;
-        }
-
-        if (goUp && currentAnimation == null)
-        {
-            currentAnimation = StartCoroutine(GoUpRoutine());
-            goUp = false;
-        }
-    }
+ 
 
     public IEnumerator GoDownRoutine()
     {
         if (!ValidateComponents()) yield break;
 
-        SetPlayerMovement(false);
         yield return MovePlayerToOffset();
 
+        SetPlayerMovement(false);
         PlayAnimation(GoDownHash, GoUpHash);
         yield return new WaitForSeconds(1f);
 
@@ -122,6 +181,9 @@ public class HealingStation : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f);
         PlayAnimation(GoUpHash, GoDownHash);
+
+        isInteracting = false;
+        canInteract = false;
     }
 
     private bool ValidateComponents()
@@ -138,7 +200,7 @@ public class HealingStation : MonoBehaviour
     {
         if (move != null)
         {
-            move.canAnimate = enabled;
+           move.canAnimate = enabled;
             move.canJump = enabled;
             move.canMove = enabled;
         }
@@ -150,18 +212,17 @@ public class HealingStation : MonoBehaviour
         Vector3 targetWorldPos = follow.TransformPoint(localTargetOffset);
         float sqrDistance = distance * distance;
 
-        while ((player.position - targetWorldPos).sqrMagnitude > sqrDistance)
+        while (Mathf.Abs(player.position.x - targetWorldPos.x) > distance)
         {
-            player.position = Vector3.MoveTowards(
-                player.position,
-                targetWorldPos,
-                moveSpeed * Time.deltaTime
-            );
+            float newX = Mathf.MoveTowards(player.position.x, targetWorldPos.x, moveSpeed * Time.deltaTime);
+            player.position = new Vector3(newX, player.position.y, player.position.z);
+            plrAnimator.SetFloat(SpeedHash, 0.95f);
             yield return null;
         }
-
+        plrAnimator.SetFloat(SpeedHash, 0f);
         currentOffset = localTargetOffset;
     }
+
 
     private void PlayAnimation(int triggerHash, int resetHash)
     {
@@ -183,28 +244,21 @@ public class HealingStation : MonoBehaviour
 
     private IEnumerator PerformHealingAndSave()
     {
-        // Heal player
         player.GetComponent<HealthModule>()?.Heal(1000);
        
 
-        // Save game state
         Scene currentScene = SceneManager.GetActiveScene();
         GameManager.Instance.CurrentPlayer.Set("SceneName", currentScene.name);
         GameManager.Instance.CurrentPlayer.Set("Checkpoint", CheckPointID);
         GameManager.Instance.CurrentPlayer.Set("HP", 100f);
 
-        // Show saving UI
         SavingUI.Instance.saving = true;
 
-        // Save asynchronously
         Task saveTask = GameManager.Instance.SavePlayer();
         yield return new WaitUntil(() => saveTask.IsCompleted);
 
-        // Complete saving process
         SavingUI.Instance.completed = true;
     }
-
-    // Public method to trigger healing station from other scripts
     public void ActivateHealingStation()
     {
         if (currentAnimation == null)
@@ -213,7 +267,6 @@ public class HealingStation : MonoBehaviour
         }
     }
 
-    // Clean up coroutines when disabled
     void OnDisable()
     {
         if (currentAnimation != null)

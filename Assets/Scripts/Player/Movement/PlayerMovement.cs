@@ -108,12 +108,12 @@ public class PlayerMovement : MonoBehaviour
     public bool canAnimate = true;
 
     [Header("Keycodes")]
-    private KeyCode leftKey = Constants.PlayerData.PlayerControls.left;
-    private KeyCode rightKey = Constants.PlayerData.PlayerControls.right;
-    private KeyCode jumpKey = Constants.PlayerData.PlayerControls.jump;
-    private KeyCode dashKey = Constants.PlayerData.PlayerControls.dash;
-    private KeyCode upKey = Constants.PlayerData.PlayerControls.up;
-    private KeyCode downKey = Constants.PlayerData.PlayerControls.down;
+    private KeyCode leftKey;
+    private KeyCode rightKey;
+    private KeyCode jumpKey;
+    private KeyCode dashKey;
+    private KeyCode upKey;
+    private KeyCode downKey;
 
     [Header("Input Settings")]
     [SerializeField] private float inputSmoothSpeed = 10f;
@@ -141,7 +141,66 @@ public class PlayerMovement : MonoBehaviour
             Debug.LogWarning("Ground layer not found! Using Default layer. Please create a 'Ground' layer.");
             groundLayer = LayerMask.GetMask("Default");
         }
+
+        StartCoroutine(GetKeybinds());
     }
+
+    private IEnumerator GetKeybinds()
+    {
+        // Wait for GameManager to be ready
+        yield return new WaitForSeconds(1f);
+
+
+        GameManager.Instance.CurrentSettings.SettingsUpdated += UpdateKeybinds;
+        if (GameManager.Instance?.CurrentSettings != null)
+        {
+            Dictionary<string, KeyCode> keybinds = GameManager.Instance.CurrentSettings.GetKeybindsDictionary();
+
+            leftKey = keybinds["left"];
+            rightKey = keybinds["right"];
+            upKey = keybinds["up"];
+            downKey = keybinds["down"];
+            jumpKey = keybinds["jump"];
+            dashKey = keybinds["dash"];
+
+    Debug.Log("Keybinds loaded successfully");
+        }
+        else
+        {
+            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
+            // Set default fallbacks
+            leftKey = KeyCode.LeftArrow;
+            rightKey = KeyCode.RightArrow;
+            upKey = KeyCode.UpArrow;
+            downKey = KeyCode.DownArrow;
+        }
+    }
+    private void UpdateKeybinds()
+    {
+        if (GameManager.Instance?.CurrentSettings != null)
+        {
+            Dictionary<string, KeyCode> keybinds = GameManager.Instance.CurrentSettings.GetKeybindsDictionary();
+
+            leftKey = keybinds["left"];
+            rightKey = keybinds["right"];
+            upKey = keybinds["up"];
+            downKey = keybinds["down"];
+            jumpKey = keybinds["jump"];
+            dashKey = keybinds["dash"];
+
+            Debug.Log("Keybinds loaded successfully");
+        }
+        else
+        {
+            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
+    
+            leftKey = KeyCode.LeftArrow;
+            rightKey = KeyCode.RightArrow;
+            upKey = KeyCode.UpArrow;
+            downKey = KeyCode.DownArrow;
+        }
+    }
+
 
     void Update()
     {

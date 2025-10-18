@@ -140,8 +140,6 @@ public class SavingUI : MonoBehaviour
         savingCompleted.fillAmount = 0f;
         savingCompleted.gameObject.SetActive(false);
         savingCircle.gameObject.SetActive(true);
-
-        // Reset flags if you want to allow saving again later
         completed = false;
         _saving = false;
         initializedForSaving = false;

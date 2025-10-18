@@ -72,7 +72,7 @@ public class PlayerHealth : MonoBehaviour
 
         if (newCurrent < currentHealth)
         {
-            StartCoroutine(HitFreeze());
+         //   StartCoroutine(HitFreeze());
             StartCoroutine(DamagePulse());
             SoundManager.Instance.PlaySFX("plrTakingDmg");
         }

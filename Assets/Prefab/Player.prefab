@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 8239739907952005366}
   - component: {fileID: -7728211178541158291}
   - component: {fileID: 3934005791781461834}
+  - component: {fileID: 5690748615785931429}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -260,8 +261,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 98fcbff947570d243bcc785d75ae4d01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hitFreezeDuration: 0.1
-  timeScaleDuringFreeze: 0.01
   stages:
   - {fileID: -4867009734684838567, guid: b191987586b43dd4388eaef6cc781c96, type: 3}
   - {fileID: -4867009734684838567, guid: b191987586b43dd4388eaef6cc781c96, type: 3}
@@ -294,18 +293,18 @@ MonoBehaviour:
   - {fileID: 8761377544097609122, guid: d1155771a496639478a391e0d6f09436, type: 3}
   - {fileID: 3535368274513484689, guid: efe7af5a69b1b4a45af0307898be377a, type: 3}
   - {fileID: 6513248199720672421, guid: c7ae0ff350a7c344ca2cf4f04928b9ca, type: 3}
-  rotationSpeed: 5
-  currentFrame: 0
-  uiAnimator: {fileID: 0}
   healthImage: {fileID: 0}
+  rotationSpeed: 5
+  hitFreezeDuration: 0
+  timeScaleDuringFreeze: 0.01
   heartbeatScaleAmount: 0.3
   heartbeatDuration: 0.3
   baseHeartbeatInterval: 1.2
-  fastestHeartbeatInterval: 0.3
+  fastestHeartbeatInterval: 0.8
   damageShakeAmount: 15
   damagePulseScale: 0.3
-  damagePulseDuration: 0.15
-  healPulseScale: 0.2
+  damagePulseDuration: 0.1
+  healPulseScale: 0.4
   healPulseDuration: 0.2
 --- !u!114 &879695094100165074
 MonoBehaviour:
@@ -397,6 +396,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Respawn
   defaultCheckPoint: {fileID: 0}
   respawnUI: {fileID: 0}
+--- !u!114 &5690748615785931429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3037404343529050380}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29822b572b9ffc7459978c1bd2a341f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIManager
+  defaultUI: {fileID: 0}
 --- !u!1 &7599228901470736001
 GameObject:
   m_ObjectHideFlags: 0

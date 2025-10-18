@@ -35,7 +35,7 @@ public class PlayerData
             case "BossesDefeated":
                 BossesDefeated = value as List<string>;
                 break;
-            case "SampleScene":
+            case "SceneName":
                 SceneName = value as string;
                 break;
             default:
