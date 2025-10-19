@@ -13,8 +13,10 @@ public class ResetVideoSettings : MonoBehaviour
     {
         if (GameManager.Instance?.CurrentSettings != null)
         {
+            // Reset the video settings
             GameManager.Instance.CurrentSettings.ResetVideoSettings();
 
+            // MANUALLY refresh all video-related UI components
             RefreshAllVideoUI();
         }
     }
@@ -24,10 +26,12 @@ public class ResetVideoSettings : MonoBehaviour
     {
         if (GameManager.Instance?.CurrentSettings == null) return;
 
+        // Get the current settings
         SettingsData settings = GameManager.Instance.CurrentSettings;
 
         if (videoSettings != null)
         {
+            // Create resolution from current settings
             Resolution currentResolution = new Resolution();
             currentResolution.width = settings.ScreenWidth;
             currentResolution.height = settings.ScreenHeight;
@@ -37,9 +41,11 @@ public class ResetVideoSettings : MonoBehaviour
             refreshRate.denominator = 1;
             currentResolution.refreshRateRatio = refreshRate;
 
+            // Update video settings with actual values
             videoSettings.selectedRes = currentResolution;
             videoSettings.currentRes = currentResolution;
 
+            // Find the correct index in the available resolutions
             videoSettings.currentResolutionIndex = videoSettings.FindResolutionIndex(currentResolution);
 
             videoSettings.UpdateResolutionText();
