@@ -1,28 +1,78 @@
+using System.Collections;
+using UnityEditor.SearchService;
 using UnityEngine;
 
-public class testing : MonoBehaviour
+public class PauseMenu : MonoBehaviour
 {
     public BaseUI optionsUI;
     public BaseUI menuUI;
+    public BaseUI AudioUI;
+    public BaseUI KeybindsUI;
+    public BaseUI VideoUI;
     bool open = false;
-    // Update is called once per frame
+
     void Update()
     {
         if (Input.GetKeyUp(KeyCode.Escape))
         {
             open = !open;
-            if (open)
-            {
-                UIManager.Instance.OpenUI(optionsUI);
-                UIManager.Instance.OpenUI(menuUI);
-            }
-            else
-            {
-
-                UIManager.Instance.CloseUI(menuUI);
-                UIManager.Instance.CloseUI(optionsUI);
-            }
-            
+           TogglePauseMenu(open);
         }
+    }
+
+    void TogglePauseMenu(bool toggle)
+    {
+        if (toggle)
+        {
+            UIManager.Instance.OpenUI(optionsUI);
+            UIManager.Instance.OpenUI(menuUI);
+
+            Time.timeScale = 0f;
+        }
+        else if(!toggle && menuUI.gameObject.activeSelf)
+        {
+            UIManager.Instance.CloseUI(menuUI);
+            UIManager.Instance.CloseUI(optionsUI);
+            Time.timeScale = 1f;
+        }
+
+    }
+
+    public void VideoButtonClicked()
+    {
+        if (!open)
+        {
+            print(":(");
+            return;
+        }
+
+        UIManager.Instance.OpenUI(VideoUI);
+
+    }
+    public void AudioButtonClicked()
+    {
+        if (!open)
+        {
+            return;
+        }
+
+        UIManager.Instance.OpenUI(AudioUI);
+
+    }
+    public void KeybindsButtonClicked()
+    {
+        if (!open)
+        {
+            return;
+        }
+
+        UIManager.Instance.OpenUI(KeybindsUI);
+
+    }
+    public void BackButtonClicked()
+    {
+        if (!open) return;
+        open = false;
+        TogglePauseMenu(false);
     }
 }

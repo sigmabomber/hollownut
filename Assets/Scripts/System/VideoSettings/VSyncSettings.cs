@@ -48,7 +48,6 @@ public class VSyncSettings : MonoBehaviour
     {
         if (!isInitialized) return;
 
-        // Toggle to next VSync state
         selectedVSync = !selectedVSync;
         UpdateVSyncText();
         UpdateApplyButtonVisibility();

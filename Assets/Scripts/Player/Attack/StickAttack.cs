@@ -64,7 +64,6 @@ public class StickAttack : MonoBehaviour
 
     private IEnumerator GetKeybinds()
     {
-        // Wait for GameManager to be ready
         yield return new WaitForSeconds(1f);
 
         GameManager.Instance.CurrentSettings.SettingsUpdated += UpdateKeybinds;
@@ -72,19 +71,16 @@ public class StickAttack : MonoBehaviour
         {
             Dictionary<string, KeyCode> keybinds = GameManager.Instance.CurrentSettings.GetKeybindsDictionary();
 
-            // Assign to your variables
             attackKey = keybinds["attack"];
             leftKey = keybinds["left"];
             rightKey = keybinds["right"];
             upKey = keybinds["up"];
             downKey = keybinds["down"];
 
-            Debug.Log("Keybinds loaded successfully");
         }
         else
         {
-            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
-            // Set default fallbacks
+           
             attackKey = KeyCode.X;
             leftKey = KeyCode.LeftArrow;
             rightKey = KeyCode.RightArrow;
@@ -104,12 +100,10 @@ public class StickAttack : MonoBehaviour
             upKey = keybinds["up"];
             downKey = keybinds["down"];
 
-            Debug.Log("Keybinds loaded successfully");
         }
         else
         {
-            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
-            // Set default fallbacks
+         
             attackKey = KeyCode.X;
             leftKey = KeyCode.LeftArrow;
             rightKey = KeyCode.RightArrow;

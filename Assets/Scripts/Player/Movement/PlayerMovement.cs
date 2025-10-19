@@ -138,7 +138,6 @@ public class PlayerMovement : MonoBehaviour
         groundLayer = LayerMask.GetMask("Ground");
         if (groundLayer == 0)
         {
-            Debug.LogWarning("Ground layer not found! Using Default layer. Please create a 'Ground' layer.");
             groundLayer = LayerMask.GetMask("Default");
         }
 
@@ -147,7 +146,6 @@ public class PlayerMovement : MonoBehaviour
 
     private IEnumerator GetKeybinds()
     {
-        // Wait for GameManager to be ready
         yield return new WaitForSeconds(1f);
 
 
@@ -163,12 +161,10 @@ public class PlayerMovement : MonoBehaviour
             jumpKey = keybinds["jump"];
             dashKey = keybinds["dash"];
 
-    Debug.Log("Keybinds loaded successfully");
         }
         else
         {
-            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
-            // Set default fallbacks
+          
             leftKey = KeyCode.LeftArrow;
             rightKey = KeyCode.RightArrow;
             upKey = KeyCode.UpArrow;
@@ -188,11 +184,9 @@ public class PlayerMovement : MonoBehaviour
             jumpKey = keybinds["jump"];
             dashKey = keybinds["dash"];
 
-            Debug.Log("Keybinds loaded successfully");
         }
         else
         {
-            Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
     
             leftKey = KeyCode.LeftArrow;
             rightKey = KeyCode.RightArrow;
@@ -339,16 +333,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void PerformJump(Vector2 force) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0); rb.AddForce(force, ForceMode2D.Impulse); }
 
-    private void PerformWallJump()
-    {
-        wallJumpLockTimer = wallJumpLockTime;
-        Vector2 jumpDir = new Vector2(-wallDirection * wallJumpAngle.x, wallJumpAngle.y).normalized;
-        rb.linearVelocity = Vector2.zero;
-        rb.AddForce(jumpDir * wallJumpForce, ForceMode2D.Impulse);
-
-        bool shouldFaceRight = wallDirection < 0;
-        if (facingRight != shouldFaceRight) Flip();
-    }
+  
 
     private IEnumerator Dash()
     {

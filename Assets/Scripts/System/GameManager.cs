@@ -9,21 +9,17 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance;
     async void Awake()
     {
-        // Load settings
         CurrentSettings = SettingsManager.Load();
         ApplySettings();
 
-        // Load player data (WAITS until complete)
         CurrentPlayer = await PlayerSaveSystem.LoadAsync(playerSavePassword);
 
         if (CurrentPlayer == null)
         {
-            Debug.Log("Creating new player data");
             CurrentPlayer = new PlayerData();
         }
         else
         {
-            Debug.Log("Loaded existing player data");
         }
     }
 

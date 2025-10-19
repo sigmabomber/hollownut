@@ -12,20 +12,17 @@ public class FullScreenSettings : MonoBehaviour
 
     void Start()
     {
-        // Initialize with current screen settings
         currentFullscreenMode = Screen.fullScreenMode;
         selectedFullscreenMode = currentFullscreenMode;
 
         UpdateFullscreenText();
         UpdateApplyButtonVisibility();
 
-        // Start coroutine to load saved settings
         StartCoroutine(InitializeWithSavedSettings());
     }
 
     private System.Collections.IEnumerator InitializeWithSavedSettings()
     {
-        // Wait for GameManager to be ready
         int maxAttempts = 10;
         int attempts = 0;
 
@@ -37,11 +34,9 @@ public class FullScreenSettings : MonoBehaviour
 
         if (GameManager.Instance != null && GameManager.Instance.CurrentSettings != null)
         {
-            // Load saved fullscreen mode
             selectedFullscreenMode = GameManager.Instance.CurrentSettings.FullscreenMode;
             currentFullscreenMode = selectedFullscreenMode;
 
-            Debug.Log($"Loaded saved fullscreen mode: {GetFullscreenDisplayName(selectedFullscreenMode)}");
         }
 
         UpdateFullscreenText();
@@ -53,7 +48,6 @@ public class FullScreenSettings : MonoBehaviour
     {
         if (!isInitialized) return;
 
-        // Cycle to next fullscreen mode
         selectedFullscreenMode = GetNextFullscreenMode(selectedFullscreenMode);
         UpdateFullscreenText();
         UpdateApplyButtonVisibility();
@@ -63,7 +57,6 @@ public class FullScreenSettings : MonoBehaviour
     {
         if (!isInitialized) return;
 
-        // Cycle to previous fullscreen mode
         selectedFullscreenMode = GetPreviousFullscreenMode(selectedFullscreenMode);
         UpdateFullscreenText();
         UpdateApplyButtonVisibility();
@@ -73,14 +66,12 @@ public class FullScreenSettings : MonoBehaviour
     {
         if (!isInitialized) return;
 
-        // Apply the selected fullscreen mode
         if (GameManager.Instance != null && GameManager.Instance.CurrentSettings != null)
         {
             GameManager.Instance.CurrentSettings.SetFullscreenMode(selectedFullscreenMode);
         }
         else
         {
-            // Fallback: apply directly without GameManager
             Screen.fullScreenMode = selectedFullscreenMode;
         }
 
@@ -96,14 +87,13 @@ public class FullScreenSettings : MonoBehaviour
         {
             fullscreenText.text = GetFullscreenDisplayName(selectedFullscreenMode);
 
-            // Visual feedback for current vs selected mode
             if (selectedFullscreenMode == currentFullscreenMode)
             {
-                fullscreenText.color = Color.white; // Current mode
+                fullscreenText.color = Color.white; 
             }
             else
             {
-                fullscreenText.color = Color.yellow; // Different mode selected
+                fullscreenText.color = Color.yellow; 
             }
         }
     }

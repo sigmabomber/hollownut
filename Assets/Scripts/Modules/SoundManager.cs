@@ -5,8 +5,8 @@ public class SoundManager : MonoBehaviour
 {
     public static SoundManager Instance;
 
-    private AudioSource SFXSource;
-    private AudioSource MusicSource;
+    public AudioSource SFXSource;
+    public AudioSource MusicSource;
 
     private string musicPlaying = "";
 
@@ -29,8 +29,6 @@ public class SoundManager : MonoBehaviour
 
         DontDestroyOnLoad(gameObject);
 
-        SFXSource = gameObject.AddComponent<AudioSource>();
-        MusicSource = gameObject.AddComponent<AudioSource>();
         MusicSource.loop = true;
 
       

@@ -1,15 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance;
 
-    public BaseUI currentExclusiveUI;
-    private List<BaseUI> activeNonExclusiveUIs = new List<BaseUI>();
-
-    public BaseUI defaultUI;
+    public BaseUI currentExclusiveUI; 
+    private List<BaseUI> activeNonExclusiveUIs = new List<BaseUI>(); 
+    public List<BaseUI> defaultUIs = new List<BaseUI>();
+    private bool isSwitchingExclusive = false; 
 
     private void Awake()
     {
@@ -21,13 +22,8 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
-        if (defaultUI != null && currentExclusiveUI == null)
-        {
-            currentExclusiveUI = defaultUI;
-            if (defaultUI.canvasGroup == null)
-                defaultUI.canvasGroup = defaultUI.GetComponent<CanvasGroup>();
-            defaultUI.canvasGroup.alpha = defaultUI.fadeInAlpha;
-        }
+        FindAllDefaultUIs();
+        ToggleDefaultUIs(true);
     }
 
     public void OpenUI(BaseUI ui)
@@ -38,62 +34,97 @@ public class UIManager : MonoBehaviour
         {
             if (currentExclusiveUI != null && currentExclusiveUI != ui)
             {
-                StartCoroutine(FadeOutAndDisable(currentExclusiveUI));
+                StartCoroutine(SwitchExclusiveUI(ui));
             }
-
-            currentExclusiveUI = ui;
-            StartCoroutine(FadeInUI(ui));
+            else if (currentExclusiveUI == null)
+            {
+                currentExclusiveUI = ui;
+                StartCoroutine(FadeInUI(ui));
+                ToggleDefaultUIs(false);
+            }
         }
         else
         {
             if (!activeNonExclusiveUIs.Contains(ui))
+            {
                 activeNonExclusiveUIs.Add(ui);
-
+            }
             StartCoroutine(FadeInUI(ui));
         }
+    }
+
+    private IEnumerator SwitchExclusiveUI(BaseUI newUI)
+    {
+        if (isSwitchingExclusive) yield break; // Prevent multiple switches at once
+
+        isSwitchingExclusive = true;
+        BaseUI oldUI = currentExclusiveUI;
+
+        // First, fade out the current exclusive UI
+        yield return StartCoroutine(FadeOutUI(oldUI));
+
+        // Update reference
+        currentExclusiveUI = newUI;
+
+        // Then, fade in the new exclusive UI
+        yield return StartCoroutine(FadeInUI(newUI));
+
+        isSwitchingExclusive = false;
     }
 
     public void CloseUI(BaseUI ui)
     {
         if (ui == null) return;
 
-        StartCoroutine(FadeOutAndDisable(ui));
-
-        if (ui.uiType == UIType.Exclusive && currentExclusiveUI == ui)
+        if (ui.uiType == UIType.Exclusive)
         {
-            currentExclusiveUI = null;
-
-            if (defaultUI != null)
+            if (currentExclusiveUI == ui && !isSwitchingExclusive)
             {
-                StartCoroutine(ShowDefaultUIDelayed(0.1f));
+                StartCoroutine(CloseExclusiveUI(ui));
             }
         }
-
-        if (ui.uiType == UIType.NonExclusive)
-            activeNonExclusiveUIs.Remove(ui);
-    }
-
-    private IEnumerator ShowDefaultUIDelayed(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-
-        if (currentExclusiveUI == null && defaultUI != null)
+        else
         {
-            currentExclusiveUI = defaultUI;
-            StartCoroutine(FadeInUI(defaultUI));
+            if (activeNonExclusiveUIs.Contains(ui))
+            {
+                StartCoroutine(FadeOutUI(ui));
+                activeNonExclusiveUIs.Remove(ui);
+            }
         }
     }
 
-    public void CloseAllExclusive()
+    private IEnumerator CloseExclusiveUI(BaseUI ui)
     {
-        if (currentExclusiveUI != null && currentExclusiveUI != defaultUI)
-        {
-            StartCoroutine(FadeOutAndDisable(currentExclusiveUI));
-            currentExclusiveUI = null;
+        yield return StartCoroutine(FadeOutUI(ui));
+        currentExclusiveUI = null;
+        ToggleDefaultUIs(true);
+    }
 
-            if (defaultUI != null)
+    private void FindAllDefaultUIs()
+    {
+        BaseUI[] allUIs = FindObjectsByType<BaseUI>(FindObjectsSortMode.None);
+        foreach (BaseUI ui in allUIs)
+        {
+            if (ui.isDefaultUI)
             {
-                StartCoroutine(ShowDefaultUIDelayed(0.1f));
+                defaultUIs.Add(ui);
+            }
+        }
+    }
+
+    public void ToggleDefaultUIs(bool toggle)
+    {
+        foreach (BaseUI defaultUI in defaultUIs)
+        {
+            if (defaultUI == currentExclusiveUI) continue;
+
+            if (toggle)
+            {
+                StartCoroutine(FadeInUI(defaultUI));
+            }
+            else
+            {
+                StartCoroutine(FadeOutUI(defaultUI));
             }
         }
     }
@@ -102,6 +133,7 @@ public class UIManager : MonoBehaviour
     {
         if (ui == null) yield break;
 
+        ui.gameObject.SetActive(true);
 
         if (ui.canvasGroup == null)
             ui.canvasGroup = ui.GetComponent<CanvasGroup>();
@@ -112,7 +144,7 @@ public class UIManager : MonoBehaviour
 
         while (timer < ui.fadeDuration)
         {
-            timer += Time.deltaTime;
+            timer += Time.unscaledDeltaTime;
             ui.canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, timer / ui.fadeDuration);
             yield return null;
         }
@@ -120,7 +152,7 @@ public class UIManager : MonoBehaviour
         ui.canvasGroup.alpha = targetAlpha;
     }
 
-    private IEnumerator FadeOutAndDisable(BaseUI ui)
+    private IEnumerator FadeOutUI(BaseUI ui)
     {
         if (ui == null) yield break;
 
@@ -133,12 +165,39 @@ public class UIManager : MonoBehaviour
 
         while (timer < ui.fadeDuration)
         {
-            timer += Time.deltaTime;
+            timer += Time.unscaledDeltaTime;
             ui.canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, timer / ui.fadeDuration);
             yield return null;
         }
 
         ui.canvasGroup.alpha = targetAlpha;
 
+     
+        
+            ui.gameObject.SetActive(false);
+        
+    }
+
+    public bool IsUIOpen(BaseUI ui)
+    {
+        if (ui.uiType == UIType.Exclusive)
+            return currentExclusiveUI == ui;
+        else
+            return activeNonExclusiveUIs.Contains(ui);
+    }
+
+    public BaseUI GetCurrentExclusiveUI()
+    {
+        return currentExclusiveUI;
+    }
+
+    public List<BaseUI> GetActiveNonExclusiveUIs()
+    {
+        return new List<BaseUI>(activeNonExclusiveUIs);
+    }
+
+    public bool IsSwitchingExclusive()
+    {
+        return isSwitchingExclusive;
     }
 }

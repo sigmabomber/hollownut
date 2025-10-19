@@ -11,6 +11,7 @@ public class KeybindButton : MonoBehaviour
     [Header("UI References")]
     public TMP_Text actionText;
     public TMP_Text keyText;
+    private Transform arrow;
     public TMP_Text conflictWarningText;
     public Button changeKeyButton;
 
@@ -19,7 +20,7 @@ public class KeybindButton : MonoBehaviour
 
     void OnEnable()
     {
-        keybindSettings = FindObjectOfType<KeybindSettings>();
+        keybindSettings = FindAnyObjectByType<KeybindSettings>();
 
         if (changeKeyButton != null)
         {
@@ -27,13 +28,14 @@ public class KeybindButton : MonoBehaviour
             changeKeyButton.onClick.AddListener(OnChangeKeyClicked);
         }
 
-        // Wait a frame then update UI
+        // Find the arrow transform
+        arrow = transform.Find("Image");
         StartCoroutine(DelayedUpdateUI());
     }
 
     private System.Collections.IEnumerator DelayedUpdateUI()
     {
-        yield return null; // Wait one frame
+        yield return null;
         UpdateUI();
     }
 
@@ -55,7 +57,6 @@ public class KeybindButton : MonoBehaviour
 
     public void UpdateUI()
     {
-        // Safe check
         if (GameManager.Instance == null || GameManager.Instance.CurrentSettings == null)
         {
             return;
@@ -67,13 +68,59 @@ public class KeybindButton : MonoBehaviour
             actionText.text = FormatActionName(actionKey);
         }
 
-        // Update key text
+        // Update key text and arrow
         if (keyText != null)
         {
             KeyCode currentKey = GetCurrentKey();
             string formattedKey = FormatKeyCode(currentKey);
-            keyText.text = formattedKey;
-            originalKeyText = formattedKey;
+
+            // Handle arrow keys - show arrow image instead of text
+            if (formattedKey == "↑")
+            {
+                keyText.text = "";
+                if (arrow != null)
+                {
+                    arrow.gameObject.SetActive(true);
+                    arrow.rotation = Quaternion.Euler(0, 0, 0); // Up arrow
+                }
+            }
+            else if (formattedKey == "→")
+            {
+                keyText.text = "";
+                if (arrow != null)
+                {
+                    arrow.gameObject.SetActive(true);
+                    arrow.rotation = Quaternion.Euler(0, 0, -90); // Right arrow
+                }
+            }
+            else if (formattedKey == "↓")
+            {
+                keyText.text = "";
+                if (arrow != null)
+                {
+                    arrow.gameObject.SetActive(true);
+                    arrow.rotation = Quaternion.Euler(0, 0, 180); // Down arrow
+                }
+            }
+            else if (formattedKey == "←")
+            {
+                keyText.text = "";
+                if (arrow != null)
+                {
+                    arrow.gameObject.SetActive(true);
+                    arrow.rotation = Quaternion.Euler(0, 0, 90); // Left arrow
+                }
+            }
+            else
+            {
+                // Regular key - show text and hide arrow
+                keyText.text = formattedKey;
+                originalKeyText = formattedKey;
+                if (arrow != null)
+                {
+                    arrow.gameObject.SetActive(false);
+                }
+            }
         }
 
         // Update conflict warning
@@ -116,6 +163,12 @@ public class KeybindButton : MonoBehaviour
         if (keyText != null)
         {
             keyText.text = "Press any key...";
+        }
+
+        // Hide arrow while listening
+        if (arrow != null)
+        {
+            arrow.gameObject.SetActive(false);
         }
 
         if (changeKeyButton != null)
@@ -181,15 +234,15 @@ public class KeybindButton : MonoBehaviour
     {
         switch (keyCode)
         {
-            case KeyCode.Mouse0: return "Left Click";
-            case KeyCode.Mouse1: return "Right Click";
+            case KeyCode.Mouse0: return "L Click";
+            case KeyCode.Mouse1: return "R Click";
             case KeyCode.Mouse2: return "Middle Click";
-            case KeyCode.LeftShift: return "Left Shift";
-            case KeyCode.RightShift: return "Right Shift";
-            case KeyCode.LeftControl: return "Left Ctrl";
-            case KeyCode.RightControl: return "Right Ctrl";
-            case KeyCode.LeftAlt: return "Left Alt";
-            case KeyCode.RightAlt: return "Right Alt";
+            case KeyCode.LeftShift: return "L Shift";
+            case KeyCode.RightShift: return "R Shift";
+            case KeyCode.LeftControl: return "L Ctrl";
+            case KeyCode.RightControl: return "R Ctrl";
+            case KeyCode.LeftAlt: return "L Alt";
+            case KeyCode.RightAlt: return "R Alt";
             case KeyCode.UpArrow: return "↑";
             case KeyCode.DownArrow: return "↓";
             case KeyCode.LeftArrow: return "←";

@@ -27,7 +27,6 @@ public class SettingsData
 
     public SettingsData()
     {
-        // Don't trigger events during constructor
         KeybindsList.Add(new KeybindPair { action = "up", key = KeyCode.UpArrow });
         KeybindsList.Add(new KeybindPair { action = "down", key = KeyCode.DownArrow });
         KeybindsList.Add(new KeybindPair { action = "left", key = KeyCode.LeftArrow });
@@ -52,7 +51,6 @@ public class SettingsData
             {
                 keybind.key = newKey;
                 SettingsUpdated?.Invoke();
-                Debug.Log($"Keybind updated: {action} -> {newKey}");
                 return;
             }
         }
@@ -288,10 +286,8 @@ public class SettingsData
 
     public void ResetKeybindsToDefault()
     {
-        // Clear the list without triggering events
         KeybindsList.Clear();
 
-        // Add default keybinds without triggering events
         KeybindsList.Add(new KeybindPair { action = "up", key = KeyCode.UpArrow });
         KeybindsList.Add(new KeybindPair { action = "down", key = KeyCode.DownArrow });
         KeybindsList.Add(new KeybindPair { action = "left", key = KeyCode.LeftArrow });
@@ -301,21 +297,74 @@ public class SettingsData
         KeybindsList.Add(new KeybindPair { action = "interact", key = KeyCode.UpArrow });
         KeybindsList.Add(new KeybindPair { action = "attack", key = KeyCode.X });
 
-        // MANUALLY trigger the SettingsUpdated event to refresh UI
         SettingsUpdated?.Invoke();
-        Debug.Log("Keybinds reset to default - UI should update");
     }
 
     public void ResetVideoSettings()
     {
-        ScreenWidth = 1920;
-        ScreenHeight = 1080;
-        TargetFrameRate = 60;
+        Resolution nativeResolution = GetNativeResolution();
+
+        ScreenWidth = nativeResolution.width;
+        ScreenHeight = nativeResolution.height;
+
+        TargetFrameRate = Mathf.RoundToInt((float)nativeResolution.refreshRateRatio.value);
+
         FullscreenMode = FullScreenMode.FullScreenWindow;
+
         VSync = true;
 
         ApplyGraphicsSettings();
-        Debug.Log("Video settings reset to default");
+
+    }
+
+
+    private Resolution GetNativeResolution()
+    {
+        Resolution[] resolutions = Screen.resolutions;
+
+        if (resolutions.Length == 0)
+        {
+            return Screen.currentResolution;
+        }
+
+        foreach (Resolution res in resolutions)
+        {
+            int refreshRate = Mathf.RoundToInt((float)res.refreshRateRatio.value);
+        }
+
+        List<Resolution> highestResolutions = new List<Resolution>();
+        int maxWidth = 0;
+        int maxHeight = 0;
+
+        foreach (Resolution res in resolutions)
+        {
+            if (res.width > maxWidth || (res.width == maxWidth && res.height > maxHeight))
+            {
+                maxWidth = res.width;
+                maxHeight = res.height;
+                highestResolutions.Clear();
+                highestResolutions.Add(res);
+            }
+            else if (res.width == maxWidth && res.height == maxHeight)
+            {
+                highestResolutions.Add(res);
+            }
+        }
+
+        Resolution bestResolution = highestResolutions[0];
+        float maxRefreshRate = (float)bestResolution.refreshRateRatio.value;
+
+        foreach (Resolution res in highestResolutions)
+        {
+            float refreshRate = (float)res.refreshRateRatio.value;
+            if (refreshRate > maxRefreshRate)
+            {
+                bestResolution = res;
+                maxRefreshRate = refreshRate;
+            }
+        }
+
+        return bestResolution;
     }
 
     public void ResetAudioSettings()
@@ -324,7 +373,6 @@ public class SettingsData
         SFXVolume = 1f;
         MasterVolume = 1f;
         SettingsUpdated?.Invoke();
-        Debug.Log("Audio settings reset to default");
     }
 
     public void ResetAllToDefault()
@@ -332,6 +380,5 @@ public class SettingsData
         ResetKeybindsToDefault();
         ResetVideoSettings();
         ResetAudioSettings();
-        Debug.Log("All settings reset to default");
     }
 }

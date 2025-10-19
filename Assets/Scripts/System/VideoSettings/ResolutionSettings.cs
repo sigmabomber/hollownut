@@ -42,7 +42,6 @@ public class ResolutionSettings : MonoBehaviour
 
         if (GameManager.Instance == null)
         {
-            Debug.LogWarning("GameManager not found after waiting, using system resolution");
             FinishInitialization();
             yield break;
         }
@@ -56,7 +55,6 @@ public class ResolutionSettings : MonoBehaviour
 
         if (GameManager.Instance.CurrentSettings == null)
         {
-            Debug.LogWarning("CurrentSettings not found after waiting, using system resolution");
             FinishInitialization();
             yield break;
         }
@@ -77,7 +75,6 @@ public class ResolutionSettings : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("Saved resolution not available, using system resolution");
             }
         }
         catch (System.Exception e)
@@ -182,7 +179,7 @@ public class ResolutionSettings : MonoBehaviour
         return Mathf.Abs((float)a.value - (float)b.value) < 0.01f;
     }
 
-    private int FindResolutionIndex(Resolution resolution)
+    public int FindResolutionIndex(Resolution resolution)
     {
         for (int i = 0; i < SystemRes.Count; i++)
         {
