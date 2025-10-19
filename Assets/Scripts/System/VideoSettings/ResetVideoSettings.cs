@@ -7,60 +7,76 @@ public class ResetVideoSettings : MonoBehaviour
     public ResolutionSettings videoSettings;
     public FullScreenSettings fullScreenSettings;
     public VSyncSettings vSyncSettings;
+
+
+    public BaseUI menuUI;
     public void ResetClicked()
     {
-        if (GameManager.Instance != null && GameManager.Instance.CurrentSettings != null)
+        if (GameManager.Instance?.CurrentSettings != null)
         {
+            // Reset the video settings
             GameManager.Instance.CurrentSettings.ResetVideoSettings();
+
+            // MANUALLY refresh all video-related UI components
             RefreshAllVideoUI();
-        }
-        else
-        {
-            Debug.LogWarning("GameManager or CurrentSettings not available");
         }
     }
 
+
     private void RefreshAllVideoUI()
     {
-        // Refresh video settings UI
+        if (GameManager.Instance?.CurrentSettings == null) return;
+
+        // Get the current settings
+        SettingsData settings = GameManager.Instance.CurrentSettings;
+
         if (videoSettings != null)
         {
-            // Get the default resolution
-            Resolution defaultResolution = new Resolution();
-            defaultResolution.width = 1920;
-            defaultResolution.height = 1080;
+            // Create resolution from current settings
+            Resolution currentResolution = new Resolution();
+            currentResolution.width = settings.ScreenWidth;
+            currentResolution.height = settings.ScreenHeight;
 
-            // Create refresh rate for default
             RefreshRate refreshRate = new RefreshRate();
-            refreshRate.numerator = 60;
+            refreshRate.numerator = (uint)settings.TargetFrameRate;
             refreshRate.denominator = 1;
-            defaultResolution.refreshRateRatio = refreshRate;
-            videoSettings.currentResolutionIndex = 15;
-            videoSettings.selectedRes = defaultResolution;
-            videoSettings.currentRes = defaultResolution;
+            currentResolution.refreshRateRatio = refreshRate;
+
+            // Update video settings with actual values
+            videoSettings.selectedRes = currentResolution;
+            videoSettings.currentRes = currentResolution;
+
+            // Find the correct index in the available resolutions
+            videoSettings.currentResolutionIndex = videoSettings.FindResolutionIndex(currentResolution);
+
             videoSettings.UpdateResolutionText();
             videoSettings.UpdateApplyButtonVisibility();
+
         }
 
-        // Refresh fullscreen settings UI
         if (fullScreenSettings != null)
         {
-            
-            fullScreenSettings.selectedFullscreenMode = FullScreenMode.FullScreenWindow;
-            fullScreenSettings.currentFullscreenMode = FullScreenMode.FullScreenWindow;
+            fullScreenSettings.selectedFullscreenMode = settings.FullscreenMode;
+            fullScreenSettings.currentFullscreenMode = settings.FullscreenMode;
             fullScreenSettings.UpdateFullscreenText();
             fullScreenSettings.UpdateApplyButtonVisibility();
+
         }
 
-        // Refresh VSync settings UI
         if (vSyncSettings != null)
         {
-            vSyncSettings.selectedVSync = true;
-            vSyncSettings.currentVSync = true;
+            vSyncSettings.selectedVSync = settings.VSync;
+            vSyncSettings.currentVSync = settings.VSync;
             vSyncSettings.UpdateVSyncText();
             vSyncSettings.UpdateApplyButtonVisibility();
+
         }
 
-       
+    }
+
+
+    public void BackClicked()
+    {
+        UIManager.Instance.OpenUI(menuUI);
     }
 }

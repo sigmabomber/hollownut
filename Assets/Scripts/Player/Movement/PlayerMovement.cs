@@ -147,7 +147,6 @@ public class PlayerMovement : MonoBehaviour
 
     private IEnumerator GetKeybinds()
     {
-        // Wait for GameManager to be ready
         yield return new WaitForSeconds(1f);
 
 
@@ -163,12 +162,11 @@ public class PlayerMovement : MonoBehaviour
             jumpKey = keybinds["jump"];
             dashKey = keybinds["dash"];
 
-    Debug.Log("Keybinds loaded successfully");
         }
         else
         {
             Debug.LogWarning("GameManager or CurrentSettings not available, using default keybinds");
-            // Set default fallbacks
+          
             leftKey = KeyCode.LeftArrow;
             rightKey = KeyCode.RightArrow;
             upKey = KeyCode.UpArrow;
@@ -188,7 +186,6 @@ public class PlayerMovement : MonoBehaviour
             jumpKey = keybinds["jump"];
             dashKey = keybinds["dash"];
 
-            Debug.Log("Keybinds loaded successfully");
         }
         else
         {

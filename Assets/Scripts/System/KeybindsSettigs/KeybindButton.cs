@@ -19,7 +19,8 @@ public class KeybindButton : MonoBehaviour
 
     void OnEnable()
     {
-        keybindSettings = FindObjectOfType<KeybindSettings>();
+        keybindSettings = FindAnyObjectByType<KeybindSettings>();
+
 
         if (changeKeyButton != null)
         {

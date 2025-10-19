@@ -9,48 +9,41 @@ public class KeybindSettings : MonoBehaviour
 
     private KeybindButton currentListeningButton;
     private bool isListeningForInput = false;
-
+    public BaseUI menuUI;
     void OnEnable()
     {
-        Debug.Log("KeybindSettings enabled - setting up event listeners");
 
         // Subscribe to settings updates
         if (GameManager.Instance?.CurrentSettings != null)
         {
             GameManager.Instance.CurrentSettings.SettingsUpdated += OnSettingsUpdated;
-            Debug.Log("Subscribed to SettingsUpdated event");
         }
         else
         {
             Debug.LogWarning("GameManager or CurrentSettings not available during OnEnable");
         }
 
-        // Wait a frame then refresh to ensure GameManager is ready
         StartCoroutine(DelayedRefresh());
     }
 
     void OnDisable()
     {
-        Debug.Log("KeybindSettings disabled - cleaning up event listeners");
 
         // Unsubscribe from settings updates
         if (GameManager.Instance?.CurrentSettings != null)
         {
             GameManager.Instance.CurrentSettings.SettingsUpdated -= OnSettingsUpdated;
-            Debug.Log("Unsubscribed from SettingsUpdated event");
         }
     }
 
     private IEnumerator DelayedRefresh()
     {
-        yield return null; // Wait one frame
+        yield return null; 
         RefreshAllKeybinds();
     }
 
     private void OnSettingsUpdated()
     {
-        Debug.Log("SettingsUpdated event received - refreshing keybind UI");
-        // Refresh immediately when settings change
         RefreshAllKeybinds();
     }
 
@@ -71,7 +64,6 @@ public class KeybindSettings : MonoBehaviour
         {
             if (Input.anyKeyDown)
             {
-                // Check for mouse buttons
                 for (int i = 0; i < 3; i++)
                 {
                     if (Input.GetMouseButtonDown(i))
@@ -81,7 +73,6 @@ public class KeybindSettings : MonoBehaviour
                     }
                 }
 
-                // Check for keyboard keys
                 foreach (KeyCode keyCode in System.Enum.GetValues(typeof(KeyCode)))
                 {
                     if (Input.GetKeyDown(keyCode))
@@ -107,7 +98,6 @@ public class KeybindSettings : MonoBehaviour
         {
             GameManager.Instance.CurrentSettings.UpdateKeybind(currentListeningButton.actionKey, newKey);
             ShowConflictWarning(newKey);
-            Debug.Log($"Keybind updated: {currentListeningButton.actionKey} -> {newKey}");
         }
 
         StopListening();
@@ -124,7 +114,6 @@ public class KeybindSettings : MonoBehaviour
             globalConflictText.text = $"Note: {FormatKeyCode(newKey)} is used for {string.Join(", ", conflictingActions)}";
             globalConflictText.gameObject.SetActive(true);
 
-            // Auto-hide after 3 seconds
             StartCoroutine(HideConflictWarningAfterDelay(3f));
         }
     }
@@ -173,7 +162,6 @@ public class KeybindSettings : MonoBehaviour
 
     private void CancelListening()
     {
-        Debug.Log("Keybind change cancelled");
         StopListening();
     }
 
@@ -190,7 +178,6 @@ public class KeybindSettings : MonoBehaviour
 
     public void RefreshAllKeybinds()
     {
-        // Safe check
         if (GameManager.Instance == null)
         {
             Debug.LogWarning("Cannot refresh keybinds - GameManager is null");
@@ -203,8 +190,7 @@ public class KeybindSettings : MonoBehaviour
             return;
         }
 
-        KeybindButton[] keybindButtons = FindObjectsOfType<KeybindButton>();
-        Debug.Log($"Refreshing {keybindButtons.Length} keybind buttons");
+        KeybindButton[] keybindButtons = FindObjectsByType<KeybindButton>(FindObjectsSortMode.None);
 
         foreach (KeybindButton button in keybindButtons)
         {
@@ -216,21 +202,17 @@ public class KeybindSettings : MonoBehaviour
     }
     public void ResetClicked()
     {
-        Debug.Log("Reset button clicked");
 
         if (GameManager.Instance != null && GameManager.Instance.CurrentSettings != null)
         {
-            // Get reference to KeybindSettings and force refresh
             KeybindSettings keybindSettings = this.GetComponent<KeybindSettings>();
             if (keybindSettings != null)
             {
-                Debug.Log("Calling ResetAllKeybindsToDefault");
                 keybindSettings.ResetAllKeybindsToDefault();
             }
             else
             {
                 Debug.LogWarning("KeybindSettings not found in scene");
-                // Fallback: reset directly
                 GameManager.Instance.CurrentSettings.ResetKeybindsToDefault();
             }
         }
@@ -243,10 +225,8 @@ public class KeybindSettings : MonoBehaviour
     {
         if (GameManager.Instance?.CurrentSettings != null)
         {
-            Debug.Log("Resetting all keybinds to default");
             GameManager.Instance.CurrentSettings.ResetKeybindsToDefault();
 
-            // MANUAL REFRESH - Force UI update immediately
             StartCoroutine(ForceRefreshAfterReset());
         }
         else
@@ -255,11 +235,13 @@ public class KeybindSettings : MonoBehaviour
         }
     }
 
+    public void BackClicked()
+    {
+        UIManager.Instance.OpenUI(menuUI);
+    }
     private IEnumerator ForceRefreshAfterReset()
     {
-        // Wait a moment for the reset to complete
         yield return new WaitForSeconds(0.1f);
-        Debug.Log("Forcing manual refresh after reset");
         RefreshAllKeybinds();
     }
 

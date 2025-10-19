@@ -11,7 +11,7 @@ public class BaseUI : MonoBehaviour
     public float fadeInAlpha = 1f;
     public float fadeOutAlpha = 0f;
     public float fadeDuration = 0.5f; // duration of fade in/out
-
+    public bool isDefaultUI = false;
     private void Awake()
     {
         if (canvasGroup == null)

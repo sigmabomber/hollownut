@@ -52,7 +52,6 @@ public class SettingsData
             {
                 keybind.key = newKey;
                 SettingsUpdated?.Invoke();
-                Debug.Log($"Keybind updated: {action} -> {newKey}");
                 return;
             }
         }
@@ -288,10 +287,8 @@ public class SettingsData
 
     public void ResetKeybindsToDefault()
     {
-        // Clear the list without triggering events
         KeybindsList.Clear();
 
-        // Add default keybinds without triggering events
         KeybindsList.Add(new KeybindPair { action = "up", key = KeyCode.UpArrow });
         KeybindsList.Add(new KeybindPair { action = "down", key = KeyCode.DownArrow });
         KeybindsList.Add(new KeybindPair { action = "left", key = KeyCode.LeftArrow });
@@ -301,21 +298,87 @@ public class SettingsData
         KeybindsList.Add(new KeybindPair { action = "interact", key = KeyCode.UpArrow });
         KeybindsList.Add(new KeybindPair { action = "attack", key = KeyCode.X });
 
-        // MANUALLY trigger the SettingsUpdated event to refresh UI
         SettingsUpdated?.Invoke();
-        Debug.Log("Keybinds reset to default - UI should update");
     }
 
     public void ResetVideoSettings()
     {
-        ScreenWidth = 1920;
-        ScreenHeight = 1080;
-        TargetFrameRate = 60;
+        // Get the system's native resolution with highest refresh rate
+        Resolution nativeResolution = GetNativeResolution();
+
+        // Set to native resolution
+        ScreenWidth = nativeResolution.width;
+        ScreenHeight = nativeResolution.height;
+
+        // Set target frame rate to the native refresh rate
+        TargetFrameRate = Mathf.RoundToInt((float)nativeResolution.refreshRateRatio.value);
+
+        // Use borderless fullscreen by default (best compatibility)
         FullscreenMode = FullScreenMode.FullScreenWindow;
+
+        // Enable VSync by default for smoother experience
         VSync = true;
 
         ApplyGraphicsSettings();
-        Debug.Log("Video settings reset to default");
+
+        Debug.Log($"Video settings reset to system native: {ScreenWidth}x{ScreenHeight} @ {TargetFrameRate}Hz, {FullscreenMode}");
+    }
+
+
+    private Resolution GetNativeResolution()
+    {
+        Resolution[] resolutions = Screen.resolutions;
+
+        if (resolutions.Length == 0)
+        {
+            Debug.LogWarning("No resolutions available, using current screen resolution");
+            return Screen.currentResolution;
+        }
+
+        // Log all available resolutions for debugging
+        Debug.Log("Available resolutions:");
+        foreach (Resolution res in resolutions)
+        {
+            int refreshRate = Mathf.RoundToInt((float)res.refreshRateRatio.value);
+            Debug.Log($"  {res.width}x{res.height} @ {refreshRate}Hz");
+        }
+
+        // First, find the highest resolution (max width x height)
+        List<Resolution> highestResolutions = new List<Resolution>();
+        int maxWidth = 0;
+        int maxHeight = 0;
+
+        foreach (Resolution res in resolutions)
+        {
+            if (res.width > maxWidth || (res.width == maxWidth && res.height > maxHeight))
+            {
+                maxWidth = res.width;
+                maxHeight = res.height;
+                highestResolutions.Clear();
+                highestResolutions.Add(res);
+            }
+            else if (res.width == maxWidth && res.height == maxHeight)
+            {
+                highestResolutions.Add(res);
+            }
+        }
+
+        // If we have multiple resolutions with the same dimensions, pick the one with highest refresh rate
+        Resolution bestResolution = highestResolutions[0];
+        float maxRefreshRate = (float)bestResolution.refreshRateRatio.value;
+
+        foreach (Resolution res in highestResolutions)
+        {
+            float refreshRate = (float)res.refreshRateRatio.value;
+            if (refreshRate > maxRefreshRate)
+            {
+                bestResolution = res;
+                maxRefreshRate = refreshRate;
+            }
+        }
+
+        Debug.Log($"Selected native resolution: {bestResolution.width}x{bestResolution.height} @ {Mathf.RoundToInt(maxRefreshRate)}Hz");
+        return bestResolution;
     }
 
     public void ResetAudioSettings()
@@ -324,7 +387,6 @@ public class SettingsData
         SFXVolume = 1f;
         MasterVolume = 1f;
         SettingsUpdated?.Invoke();
-        Debug.Log("Audio settings reset to default");
     }
 
     public void ResetAllToDefault()
@@ -332,6 +394,5 @@ public class SettingsData
         ResetKeybindsToDefault();
         ResetVideoSettings();
         ResetAudioSettings();
-        Debug.Log("All settings reset to default");
     }
 }

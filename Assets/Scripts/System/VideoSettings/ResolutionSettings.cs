@@ -182,7 +182,7 @@ public class ResolutionSettings : MonoBehaviour
         return Mathf.Abs((float)a.value - (float)b.value) < 0.01f;
     }
 
-    private int FindResolutionIndex(Resolution resolution)
+    public int FindResolutionIndex(Resolution resolution)
     {
         for (int i = 0; i < SystemRes.Count; i++)
         {
