@@ -172,6 +172,10 @@ public class UIManager : MonoBehaviour
         
             ui.gameObject.SetActive(false);
         
+        if (!ui.isDefaultUI)
+        {
+            ui.gameObject.SetActive(false);
+        }
     }
 
     public bool IsUIOpen(BaseUI ui)

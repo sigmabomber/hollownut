@@ -155,6 +155,7 @@ public class CameraController : MonoBehaviour
 
     public void SetZone(CameraZone zone)
     {
+        print(":)");
         ToggleFollow(true);
         currentZone = zone;
        

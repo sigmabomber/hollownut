@@ -29,7 +29,7 @@ public class PauseMenu : MonoBehaviour
 
             Time.timeScale = 0f;
         }
-        else if(!toggle && menuUI.gameObject.activeSelf)
+        else
         {
             UIManager.Instance.CloseUI(menuUI);
             UIManager.Instance.CloseUI(optionsUI);
@@ -50,21 +50,11 @@ public class PauseMenu : MonoBehaviour
         UIManager.Instance.OpenUI(VideoUI);
 
     }
-    public void AudioButtonClicked()
-    {
-        if (!open)
-        {
-            return;
-        }
-
-        SoundManager.Instance.PlaySFX("Click");
-        UIManager.Instance.OpenUI(AudioUI);
-
-    }
     public void KeybindsButtonClicked()
     {
         if (!open)
         {
+            print(":(");
             return;
         }
 

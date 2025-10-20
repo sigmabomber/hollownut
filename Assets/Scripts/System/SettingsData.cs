@@ -258,7 +258,6 @@ public class SettingsData
             ScreenWidth = closest.width;
             ScreenHeight = closest.height;
             TargetFrameRate = Mathf.RoundToInt((float)closest.refreshRateRatio.value);
-            Debug.LogWarning($"Invalid resolution settings. Using closest match: {ScreenWidth}x{ScreenHeight}");
             SettingsUpdated?.Invoke();
         }
     }
@@ -330,6 +329,7 @@ public class SettingsData
         foreach (Resolution res in resolutions)
         {
             int refreshRate = Mathf.RoundToInt((float)res.refreshRateRatio.value);
+            Debug.Log($"  {res.width}x{res.height} @ {refreshRate}Hz");
         }
 
         List<Resolution> highestResolutions = new List<Resolution>();
@@ -364,6 +364,7 @@ public class SettingsData
             }
         }
 
+     
         return bestResolution;
     }
 

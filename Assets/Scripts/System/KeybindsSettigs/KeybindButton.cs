@@ -28,8 +28,7 @@ public class KeybindButton : MonoBehaviour
             changeKeyButton.onClick.AddListener(OnChangeKeyClicked);
         }
 
-        // Find the arrow transform
-        arrow = transform.Find("KeybindImage");
+        arrow = transform.Find("Image");
         StartCoroutine(DelayedUpdateUI());
     }
 
