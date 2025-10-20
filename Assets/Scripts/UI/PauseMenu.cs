@@ -46,6 +46,7 @@ public class PauseMenu : MonoBehaviour
             return;
         }
 
+        SoundManager.Instance.PlaySFX("Click");
         UIManager.Instance.OpenUI(VideoUI);
 
     }
@@ -56,6 +57,7 @@ public class PauseMenu : MonoBehaviour
             return;
         }
 
+        SoundManager.Instance.PlaySFX("Click");
         UIManager.Instance.OpenUI(AudioUI);
 
     }
@@ -66,12 +68,15 @@ public class PauseMenu : MonoBehaviour
             return;
         }
 
+        SoundManager.Instance.PlaySFX("Click");
         UIManager.Instance.OpenUI(KeybindsUI);
 
     }
     public void BackButtonClicked()
     {
         if (!open) return;
+
+        SoundManager.Instance.PlaySFX("Click");
         open = false;
         TogglePauseMenu(false);
     }

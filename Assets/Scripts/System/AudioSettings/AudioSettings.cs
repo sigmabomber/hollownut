@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 public class AudioSettings : MonoBehaviour
@@ -47,7 +48,7 @@ public class AudioSettings : MonoBehaviour
 
         if (musicInputField != null)
         {
-            musicInputField.text = Mathf.RoundToInt(GameManager.Instance.CurrentSettings.MusicVolume * 100).ToString();
+            musicInputField.text = $"{Mathf.RoundToInt(GameManager.Instance.CurrentSettings.MusicVolume * 100)}%";
             musicInputField.onValueChanged.AddListener(OnMusicInputFieldChanged);
             musicInputField.onEndEdit.AddListener(OnMusicInputFieldEndEdit);
         }
@@ -67,7 +68,7 @@ public class AudioSettings : MonoBehaviour
 
         if (sfxInputField != null)
         {
-            sfxInputField.text = Mathf.RoundToInt(GameManager.Instance.CurrentSettings.SFXVolume * 100).ToString();
+            sfxInputField.text = $"{Mathf.RoundToInt(GameManager.Instance.CurrentSettings.SFXVolume * 100)}%";
             sfxInputField.onValueChanged.AddListener(OnSFXInputFieldChanged);
             sfxInputField.onEndEdit.AddListener(OnSFXInputFieldEndEdit);
         }
@@ -145,14 +146,14 @@ public class AudioSettings : MonoBehaviour
 
             if (musicInputField != null)
             {
-                musicInputField.text = Mathf.RoundToInt(volume * 100).ToString();
+                musicInputField.text =  $"{Mathf.RoundToInt(volume * 100)}%";
             }
         }
         else
         {
             if (musicInputField != null)
             {
-                musicInputField.text = Mathf.RoundToInt(GameManager.Instance.CurrentSettings.MusicVolume * 100).ToString();
+                musicInputField.text = $"{Mathf.RoundToInt(GameManager.Instance.CurrentSettings.MusicVolume* 100)}%";
             }
         }
     }
@@ -165,7 +166,7 @@ public class AudioSettings : MonoBehaviour
         GameManager.Instance.CurrentSettings.SetSFXVolume(value);
         if (sfxInputField != null)
         {
-            sfxInputField.text = Mathf.RoundToInt(value * 100).ToString();
+            sfxInputField.text = $"{Mathf.RoundToInt(value * 100)}%";
         }
         isUpdatingUI = false;
     }
@@ -197,14 +198,14 @@ public class AudioSettings : MonoBehaviour
 
             if (sfxInputField != null)
             {
-                sfxInputField.text = Mathf.RoundToInt(volume * 100).ToString();
+                sfxInputField.text = $"{Mathf.RoundToInt(volume * 100)}%";
             }
         }
         else
         {
             if (sfxInputField != null)
             {
-                sfxInputField.text = Mathf.RoundToInt(GameManager.Instance.CurrentSettings.SFXVolume * 100).ToString();
+                sfxInputField.text = $"{Mathf.RoundToInt(GameManager.Instance.CurrentSettings.SFXVolume * 100)}%";
             }
         }
     }
@@ -231,7 +232,7 @@ public class AudioSettings : MonoBehaviour
         }
         if (musicInputField != null)
         {
-            musicInputField.text = Mathf.RoundToInt(GameManager.Instance.CurrentSettings.MusicVolume * 100).ToString();
+            musicInputField.text = $"{Mathf.RoundToInt(GameManager.Instance.CurrentSettings.MusicVolume * 100)}%";
         }
 
         if (sfxSlider != null)
@@ -240,7 +241,7 @@ public class AudioSettings : MonoBehaviour
         }
         if (sfxInputField != null)
         {
-            sfxInputField.text = Mathf.RoundToInt(GameManager.Instance.CurrentSettings.SFXVolume * 100).ToString();
+            sfxInputField.text = $"{Mathf.RoundToInt(GameManager.Instance.CurrentSettings.SFXVolume * 100)}%";
         }
 
      
@@ -248,7 +249,6 @@ public class AudioSettings : MonoBehaviour
         isUpdatingUI = false;
     }
 
-    // Public methods for external control
     public void SetMusicVolume(float volume)
     {
         if (GameManager.Instance?.CurrentSettings != null)
@@ -275,13 +275,19 @@ public class AudioSettings : MonoBehaviour
 
     public void ResetClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (GameManager.Instance?.CurrentSettings != null)
         {
             GameManager.Instance.CurrentSettings.ResetAudioSettings();
         }
+
     }
     public void BackClicked()
-    {
+       {
+
+        SoundManager.Instance.PlaySFX("Click");
         UIManager.Instance.OpenUI(menuUI);
+
     }
 }

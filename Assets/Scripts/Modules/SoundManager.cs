@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -31,9 +32,28 @@ public class SoundManager : MonoBehaviour
 
         MusicSource.loop = true;
 
+        StartCoroutine(EstablishAudioVolumes());
+
+        
+
       
     }
 
+    IEnumerator EstablishAudioVolumes()
+    {
+        yield return new WaitForSeconds(1f);
+
+        if (SFXSource == null || MusicSource == null || GameManager.Instance == null) yield break;
+        GameManager.Instance.CurrentSettings.SettingsUpdated += GetAudioVolumes;
+        SFXSource.volume = GameManager.Instance.CurrentSettings.SFXVolume;
+        MusicSource.volume = GameManager.Instance.CurrentSettings.MusicVolume;
+    }
+
+    private void GetAudioVolumes()
+    {
+        SFXSource.volume = GameManager.Instance.CurrentSettings.SFXVolume;
+        MusicSource.volume = GameManager.Instance.CurrentSettings.MusicVolume;
+    }
 
     private void Start()
     {

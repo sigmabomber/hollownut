@@ -252,7 +252,8 @@ public class HealingStation : MonoBehaviour
         GameManager.Instance.CurrentPlayer.Set("Checkpoint", CheckPointID);
         GameManager.Instance.CurrentPlayer.Set("HP", 100f);
 
-        SavingUI.Instance.saving = true;
+        if (SavingUI.Instance != null)
+            SavingUI.Instance.saving = true;
 
         Task saveTask = GameManager.Instance.SavePlayer();
         yield return new WaitUntil(() => saveTask.IsCompleted);

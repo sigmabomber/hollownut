@@ -1,4 +1,5 @@
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
@@ -150,12 +151,12 @@ public class CameraController : MonoBehaviour
     }
     public void DarkenArena(float darknessAmount)
     {
-        // Optional: Implement screen darkening for phase transitions
-        // This could use a UI overlay or post-processing effect
     }
 
     public void SetZone(CameraZone zone)
     {
+        print(":)");
+        ToggleFollow(true);
         currentZone = zone;
        
     }

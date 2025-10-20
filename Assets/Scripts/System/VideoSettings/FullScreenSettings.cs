@@ -46,6 +46,8 @@ public class FullScreenSettings : MonoBehaviour
 
     public void RightArrowClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (!isInitialized) return;
 
         selectedFullscreenMode = GetNextFullscreenMode(selectedFullscreenMode);
@@ -55,6 +57,8 @@ public class FullScreenSettings : MonoBehaviour
 
     public void LeftArrowClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (!isInitialized) return;
 
         selectedFullscreenMode = GetPreviousFullscreenMode(selectedFullscreenMode);

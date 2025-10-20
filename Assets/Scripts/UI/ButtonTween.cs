@@ -20,11 +20,12 @@ public class ButtonTween : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
 
     public void OnPointerEnter(PointerEventData data)
     {
+        SoundManager.Instance.PlaySFX("hover");
         currentTween?.Kill();
         currentTween = transform
             .DOScale(targetScale, duration)
             .SetEase(easeType)
-            .SetUpdate(true); // << important: ignores Time.timeScale
+            .SetUpdate(true); 
     }
 
     public void OnPointerExit(PointerEventData data)
@@ -33,6 +34,6 @@ public class ButtonTween : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         currentTween = transform
             .DOScale(originalScale, duration)
             .SetEase(easeType)
-            .SetUpdate(true); // << important: ignores Time.timeScale
+            .SetUpdate(true); 
     }
 }

@@ -95,6 +95,8 @@ public class ResolutionSettings : MonoBehaviour
 
     public void RightArrowClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (!isInitialized) return;
 
         currentResolutionIndex++;
@@ -110,6 +112,8 @@ public class ResolutionSettings : MonoBehaviour
 
     public void LeftArrowClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (!isInitialized) return;
 
         currentResolutionIndex--;

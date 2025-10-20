@@ -29,7 +29,7 @@ public class KeybindButton : MonoBehaviour
         }
 
         // Find the arrow transform
-        arrow = transform.Find("Image");
+        arrow = transform.Find("KeybindImage");
         StartCoroutine(DelayedUpdateUI());
     }
 
