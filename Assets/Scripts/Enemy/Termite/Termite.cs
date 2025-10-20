@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using UnityEngine;
+
+using System.Collections;
 using UnityEngine;
 using Unity.VisualScripting;
 using System.Runtime.CompilerServices;
@@ -73,6 +75,14 @@ public class Termite : MonoBehaviour
     private Vector2 lastMovementDirection = Vector2.right;
     private float directionChangeThreshold = 0.1f;
 
+    [Header("Barrier Settings")]
+    public bool useBarrier = true;
+    public Vector2 barrierCenter = Vector2.zero;
+    public Vector2 barrierSize = new Vector2(10f, 5f);
+    public float barrierPushForce = 5f;
+    public float barrierCheckDistance = 1f;
+    public Color barrierGizmoColor = new Color(1f, 0.5f, 0f, 0.3f);
+
     private Coroutine idleRoutine;
     private Coroutine stickDetectionRoutine;
     private Coroutine attackSequenceRoutine;
@@ -92,6 +102,9 @@ public class Termite : MonoBehaviour
     private SpriteRenderer spriteRenderer;
 
     private bool CanAttack => Time.time - lastAttackTime >= attackCooldown;
+
+    public Bounds BarrierBounds => new Bounds(barrierCenter, barrierSize);
+    public bool IsInsideBarrier => IsPositionInsideBarrier(transform.position);
 
     private void Awake()
     {
@@ -128,13 +141,14 @@ public class Termite : MonoBehaviour
         enemyModule.OnStartAttack += StartAttackingEnemy;
 
         healthModule = GetComponent<HealthModule>();
-        healthModule.Initialize(1f);
+        healthModule.Initialize(30f);
         healthModule.onHealthChanged += HandleHealthChange;
         healthModule.onDeath += HandleDeath;
 
         idleRoutine = StartCoroutine(IdleRoutine());
         stickDetectionRoutine = StartCoroutine(StickDetectionRoutine());
     }
+
 
     void HandleDeath()
     {
@@ -211,6 +225,109 @@ public class Termite : MonoBehaviour
         UpdateFlipping();
         UpdateAnimation();
         CheckAttackRange();
+
+        if (useBarrier)
+        {
+            CheckBarrierConstraints();
+        }
+    }
+    private void CheckBarrierConstraints()
+    {
+        if (isSticking) return; 
+
+        Vector3 currentPosition = transform.position;
+
+        if (!IsPositionInsideBarrier(currentPosition))
+        {
+            Vector2 directionToCenter = (barrierCenter - (Vector2)currentPosition).normalized;
+            rb.AddForce(directionToCenter * barrierPushForce, ForceMode2D.Force);
+
+            if (flashColorRoutine == null)
+            {
+                flashColorRoutine = StartCoroutine(FlashColor(Color.yellow));
+            }
+        }
+    }
+    private bool IsPositionInsideBarrier(Vector3 position)
+    {
+        Bounds bounds = BarrierBounds;
+        return position.x >= bounds.min.x && position.x <= bounds.max.x &&
+               position.y >= bounds.min.y && position.y <= bounds.max.y;
+    }
+    private Vector2 GetSafeDirection(Vector2 desiredDirection)
+    {
+        Vector2 checkPosition = (Vector2)transform.position + desiredDirection * 2f;
+
+        RaycastHit2D groundCheck = Physics2D.Raycast(
+            transform.position,
+            desiredDirection,
+            2f,
+            groundLayerMask
+        );
+
+        RaycastHit2D groundBelow = Physics2D.Raycast(
+            checkPosition + Vector2.up * 0.5f,
+            Vector2.down,
+            groundCheckDistance,
+            groundLayerMask
+        );
+
+        bool isDirectionSafe = IsPositionInsideBarrier(checkPosition);
+
+        if (groundCheck.collider == null || groundBelow.collider == null || !isDirectionSafe)
+        {
+            Vector2[] alternativeDirections = {
+                new Vector2(-desiredDirection.x, desiredDirection.y),
+                new Vector2(desiredDirection.x * 0.5f, desiredDirection.y),
+                new Vector2(0f, 0.5f),
+                new Vector2(Random.Range(-0.3f, 0.3f), 0.7f),
+                Vector2.up,
+                -desiredDirection.normalized
+            };
+
+            foreach (Vector2 altDir in alternativeDirections)
+            {
+                Vector2 altCheckPos = (Vector2)transform.position + altDir.normalized * 2f;
+
+                if (!IsPositionInsideBarrier(altCheckPos)) continue;
+
+                RaycastHit2D altGroundCheck = Physics2D.Raycast(
+                    transform.position,
+                    altDir.normalized,
+                    2f,
+                    groundLayerMask
+                );
+                RaycastHit2D altGroundBelow = Physics2D.Raycast(
+                    altCheckPos + Vector2.up * 0.5f,
+                    Vector2.down,
+                    groundCheckDistance,
+                    groundLayerMask
+                );
+
+                if (altGroundCheck.collider != null && altGroundBelow.collider != null)
+                {
+                    return altDir.normalized;
+                }
+            }
+
+            Vector2 toCenter = (barrierCenter - (Vector2)transform.position).normalized;
+            return toCenter;
+        }
+
+        return desiredDirection;
+    }
+    private Vector2 GetAvoidanceDirection()
+    {
+        if (target == null)
+        {
+            return GetSafeDirection(new Vector2(Random.Range(-1f, 1f), Random.Range(0.2f, 0.8f)).normalized);
+        }
+
+        Vector2 awayFromPlayer = (transform.position - target.position).normalized;
+        awayFromPlayer += new Vector2(Random.Range(-0.5f, 0.5f), Random.Range(0.1f, 0.5f));
+        awayFromPlayer.Normalize();
+
+        return GetSafeDirection(awayFromPlayer);
     }
 
     private void CheckAttackRange()
@@ -566,75 +683,8 @@ public class Termite : MonoBehaviour
         }
     }
 
-    private Vector2 GetAvoidanceDirection()
-    {
-        if (target == null)
-        {
-            return GetSafeDirection(new Vector2(Random.Range(-1f, 1f), Random.Range(0.2f, 0.8f)).normalized);
-        }
-
-        Vector2 awayFromPlayer = (transform.position - target.position).normalized;
-        awayFromPlayer += new Vector2(Random.Range(-0.5f, 0.5f), Random.Range(0.1f, 0.5f));
-        awayFromPlayer.Normalize();
-
-        return GetSafeDirection(awayFromPlayer);
-    }
-
-    private Vector2 GetSafeDirection(Vector2 desiredDirection)
-    {
-        Vector2 checkPosition = (Vector2)transform.position + desiredDirection * 2f;
-
-        RaycastHit2D groundCheck = Physics2D.Raycast(
-            transform.position,
-            desiredDirection,
-            2f,
-            groundLayerMask
-        );
-
-        RaycastHit2D groundBelow = Physics2D.Raycast(
-            checkPosition + Vector2.up * 0.5f,
-            Vector2.down,
-            groundCheckDistance,
-            groundLayerMask
-        );
-
-        if (groundCheck.collider == null || groundBelow.collider == null)
-        {
-            Vector2[] alternativeDirections = {
-                new Vector2(-desiredDirection.x, desiredDirection.y),
-                new Vector2(desiredDirection.x * 0.5f, desiredDirection.y),
-                new Vector2(0f, 0.5f),
-                new Vector2(Random.Range(-0.3f, 0.3f), 0.7f)
-            };
-
-            foreach (Vector2 altDir in alternativeDirections)
-            {
-                Vector2 altCheckPos = (Vector2)transform.position + altDir.normalized * 2f;
-                RaycastHit2D altGroundCheck = Physics2D.Raycast(
-                    transform.position,
-                    altDir.normalized,
-                    2f,
-                    groundLayerMask
-                );
-                RaycastHit2D altGroundBelow = Physics2D.Raycast(
-                    altCheckPos + Vector2.up * 0.5f,
-                    Vector2.down,
-                    groundCheckDistance,
-                    groundLayerMask
-                );
-
-                if (altGroundCheck.collider != null && altGroundBelow.collider != null)
-                {
-                    return altDir.normalized;
-                }
-            }
-
-            return Vector2.up;
-        }
-
-        return desiredDirection;
-    }
-
+ 
+   
     private IEnumerator AvoidanceBehavior()
     {
         if (isDead) yield break;
@@ -668,6 +718,16 @@ public class Termite : MonoBehaviour
     private void Jump(Vector2 force)
     {
         if (isDead) return;
+
+        if (useBarrier)
+        {
+            Vector2 predictedPosition = (Vector2)transform.position + force.normalized * 2f;
+            if (!IsPositionInsideBarrier(predictedPosition))
+            {
+                Vector2 toCenter = (barrierCenter - (Vector2)transform.position).normalized * 0.7f;
+                force = Vector2.Lerp(force, toCenter * jumpForce, 0.5f);
+            }
+        }
 
         rb.bodyType = RigidbodyType2D.Dynamic;
         rb.linearVelocity = Vector2.zero;
@@ -792,6 +852,12 @@ public class Termite : MonoBehaviour
     public float LastDirection => lastDirection;
     public Vector2 LastMovementDirection => lastMovementDirection;
 
+    public void SetBarrier(Vector2 center, Vector2 size, bool enable = true)
+    {
+        barrierCenter = center;
+        barrierSize = size;
+        useBarrier = enable;
+    }
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
@@ -799,5 +865,14 @@ public class Termite : MonoBehaviour
 
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, playerDetectionRadius);
+
+        if (useBarrier)
+        {
+            Gizmos.color = barrierGizmoColor;
+            Gizmos.DrawWireCube(barrierCenter, barrierSize);
+
+            Gizmos.color = IsInsideBarrier ? Color.green : Color.red;
+            Gizmos.DrawWireSphere(transform.position, 0.3f);
+        }
     }
 }

@@ -11,6 +11,8 @@ public class ResetVideoSettings : MonoBehaviour
     public BaseUI menuUI;
     public void ResetClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (GameManager.Instance?.CurrentSettings != null)
         {
             GameManager.Instance.CurrentSettings.ResetVideoSettings();
@@ -70,6 +72,8 @@ public class ResetVideoSettings : MonoBehaviour
 
     public void BackClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         UIManager.Instance.OpenUI(menuUI);
     }
 }

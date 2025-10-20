@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 7ec92210a9d95d14baa8d900ac0a10c8
+guid: eb0511e39b8543b478c5dcdef45a473d
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -103,9 +103,9 @@ TextureImporter:
       name: Arrow-1.png_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 4
         y: 0
-        width: 31
+        width: 25
         height: 32
       alignment: 0
       pivot: {x: 0, y: 0}

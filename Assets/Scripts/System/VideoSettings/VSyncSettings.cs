@@ -46,6 +46,8 @@ public class VSyncSettings : MonoBehaviour
 
     public void RightArrowClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (!isInitialized) return;
 
         selectedVSync = !selectedVSync;
@@ -55,6 +57,8 @@ public class VSyncSettings : MonoBehaviour
 
     public void LeftArrowClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         if (!isInitialized) return;
 
         selectedVSync = !selectedVSync;

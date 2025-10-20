@@ -203,6 +203,7 @@ public class KeybindSettings : MonoBehaviour
     public void ResetClicked()
     {
 
+        SoundManager.Instance.PlaySFX("Click");
         if (GameManager.Instance != null && GameManager.Instance.CurrentSettings != null)
         {
             KeybindSettings keybindSettings = this.GetComponent<KeybindSettings>();
@@ -237,6 +238,8 @@ public class KeybindSettings : MonoBehaviour
 
     public void BackClicked()
     {
+
+        SoundManager.Instance.PlaySFX("Click");
         UIManager.Instance.OpenUI(menuUI);
     }
     private IEnumerator ForceRefreshAfterReset()

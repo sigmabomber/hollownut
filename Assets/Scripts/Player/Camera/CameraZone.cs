@@ -4,7 +4,7 @@ public class CameraZone : MonoBehaviour
 {
     public Vector2 minBounds; 
     public Vector2 maxBounds;
-
+    public CameraController cam;
 
     public new Transform camera;
     private void OnDrawGizmos()
@@ -25,12 +25,15 @@ public class CameraZone : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        CameraController cam = camera.GetComponent<CameraController>();
 
-        if (cam == null)
+
         if (cam != null && collision.CompareTag("Player"))
         {
             cam.SetZone(this);
         }
+            else
+            {
+                print(collision.name);
+            }
     }
 }

@@ -47,6 +47,7 @@ public class StickAttack : MonoBehaviour
 
     private bool hasHitThisAttack = false;
 
+    private bool hasStickUnlocked = false;
 
 
     public List<string> sfx = new();
@@ -114,9 +115,16 @@ public class StickAttack : MonoBehaviour
 
     private void Update()
     {
-        GetDirection();
-        GetInput();
-        slashObj.SetActive(attacking);
+        if(!canAttack)
+        hasStickUnlocked = GameManager.Instance.CurrentPlayer.StickUnlocked;
+
+        
+        if (canAttack)
+        {
+            GetDirection();
+            GetInput();
+            slashObj.SetActive(attacking);
+        }
     }
 
     private void FixedUpdate()

@@ -71,6 +71,13 @@ public class Mantis : MonoBehaviour
     [SerializeField] private GameObject attackHitPlayerVFX;
     [SerializeField] private LayerMask obstacleLayers;
 
+    [Header("Barrier Settings")]
+    public bool useBarrier = true;
+    public Vector2 barrierCenter = Vector2.zero;
+    public Vector2 barrierSize = new Vector2(10f, 5f);
+    public float barrierPushForce = 5f;
+    public Color barrierGizmoColor = new Color(1f, 0.5f, 0f, 0.3f);
+
     private MantisState currentState = MantisState.Idle;
     private Transform player;
     private float stateTimer = 0f;
@@ -111,9 +118,12 @@ public class Mantis : MonoBehaviour
     public GameObject cachedPlayerObject = null;
     private Vector2 lastKnownPlayerPosition;
     private float lastPlayerSeenTime = -999f;
-    private const float PLAYER_SEARCH_DURATION = 10f; 
+    private const float PLAYER_SEARCH_DURATION = 10f;
 
     public bool IsDefensiveMode => isDefensiveMode;
+
+    public Bounds BarrierBounds => new Bounds(barrierCenter, barrierSize);
+    public bool IsInsideBarrier => IsPositionInsideBarrier(transform.position);
 
     void Start()
     {
@@ -299,6 +309,11 @@ public class Mantis : MonoBehaviour
 
         UpdatePlayerReference();
 
+        if (useBarrier)
+        {
+            CheckBarrierConstraints();
+        }
+
         if (player != null && ShouldUpdateFacingDirection())
         {
             UpdateFacingDirection();
@@ -331,6 +346,75 @@ public class Mantis : MonoBehaviour
         UpdateAnimator();
     }
 
+    private void CheckBarrierConstraints()
+    {
+        if (currentState == MantisState.Attacking || currentState == MantisState.Retreating) return;
+
+        Vector3 currentPosition = transform.position;
+
+        if (!IsPositionInsideBarrier(currentPosition))
+        {
+            Vector2 directionToCenter = (barrierCenter - (Vector2)currentPosition).normalized;
+            rb.AddForce(directionToCenter * barrierPushForce, ForceMode2D.Force);
+
+            if (flashCoroutine == null)
+            {
+                flashCoroutine = StartCoroutine(FlashColor(Color.yellow));
+            }
+        }
+    }
+
+    private bool IsPositionInsideBarrier(Vector3 position)
+    {
+        Bounds bounds = BarrierBounds;
+        return position.x >= bounds.min.x && position.x <= bounds.max.x &&
+               position.y >= bounds.min.y && position.y <= bounds.max.y;
+    }
+
+    private Vector2 GetSafeDirection(Vector2 desiredDirection)
+    {
+        Vector2 checkPosition = (Vector2)transform.position + desiredDirection * 2f;
+
+        bool isDirectionSafe = IsPositionInsideBarrier(checkPosition);
+
+        if (!isDirectionSafe)
+        {
+            Vector2[] alternativeDirections = {
+                new Vector2(-desiredDirection.x, desiredDirection.y),
+                new Vector2(desiredDirection.x * 0.5f, desiredDirection.y),
+                new Vector2(0f, 0.5f),
+                new Vector2(Random.Range(-0.3f, 0.3f), 0.7f),
+                Vector2.up,
+                -desiredDirection.normalized
+            };
+
+            foreach (Vector2 altDir in alternativeDirections)
+            {
+                Vector2 altCheckPos = (Vector2)transform.position + altDir.normalized * 2f;
+
+                if (!IsPositionInsideBarrier(altCheckPos)) continue;
+
+                return altDir.normalized;
+            }
+
+            Vector2 toCenter = (barrierCenter - (Vector2)transform.position).normalized;
+            return toCenter;
+        }
+
+        return desiredDirection;
+    }
+
+    private IEnumerator FlashColor(Color color)
+    {
+        if (spriteRenderer != null && spriteRenderer.color.a > 0.5f)
+        {
+            spriteRenderer.color = color;
+            yield return new WaitForSeconds(0.1f);
+            spriteRenderer.color = Color.white;
+        }
+        flashCoroutine = null;
+    }
+
     private void UpdatePlayerReference()
     {
         if (cachedPlayerObject != null)
@@ -359,8 +443,6 @@ public class Mantis : MonoBehaviour
             OnPlayerDetected(enemyModule.target);
         }
     }
-
-  
 
     private void HandleIdleState()
     {
@@ -399,6 +481,11 @@ public class Mantis : MonoBehaviour
 
         if (distanceToTarget > 0.5f)
         {
+            if (useBarrier)
+            {
+                direction = GetSafeDirection(direction);
+            }
+
             if (rb != null)
             {
                 rb.linearVelocity = direction * roamSpeed;
@@ -429,7 +516,7 @@ public class Mantis : MonoBehaviour
             return;
         }
 
-        player = cachedPlayerObject.transform; 
+        player = cachedPlayerObject.transform;
         UpdateFacingDirection();
 
         float distanceToPlayer = Mathf.Abs(player.position.x - transform.position.x);
@@ -456,8 +543,6 @@ public class Mantis : MonoBehaviour
     {
         return cachedPlayerObject != null;
     }
-
-   
 
     private void HandleAttackingState()
     {
@@ -614,9 +699,6 @@ public class Mantis : MonoBehaviour
         return distanceToPlayer <= attackRange * 2f;
     }
 
-    
-    
-
     private void QuickJumpBack()
     {
         if (currentState == MantisState.DefensiveStance || currentState == MantisState.Chasing)
@@ -653,6 +735,11 @@ public class Mantis : MonoBehaviour
         else
         {
             jumpDirection = new Vector2(-Mathf.Sign(transform.localScale.x), 0.5f).normalized;
+        }
+
+        if (useBarrier)
+        {
+            jumpDirection = GetSafeDirection(jumpDirection);
         }
 
         if (rb != null)
@@ -746,9 +833,13 @@ public class Mantis : MonoBehaviour
         Vector2 direction = (player.position - transform.position).normalized;
         direction.y = 0;
 
+        if (useBarrier)
+        {
+            direction = GetSafeDirection(direction);
+        }
+
         rb.linearVelocity = direction * speed;
     }
-
 
     private void OnPlayerDetected(GameObject detectedPlayer)
     {
@@ -761,8 +852,6 @@ public class Mantis : MonoBehaviour
 
         TransitionToState(MantisState.Chasing);
     }
-
-   
 
     private void ExecuteParryCounter()
     {
@@ -939,6 +1028,11 @@ public class Mantis : MonoBehaviour
             if (player == null || isDead) break;
 
             Vector2 currentDirection = new Vector2(Mathf.Sign(player.position.x - transform.position.x), 0);
+
+            if (useBarrier)
+            {
+                currentDirection = GetSafeDirection(currentDirection);
+            }
 
             if (rb != null)
             {
@@ -1124,6 +1218,12 @@ public class Mantis : MonoBehaviour
     private void PickNewRoamTarget()
     {
         Vector2 randomDirection = new Vector2(Random.Range(-1f, 1f), 0).normalized;
+
+        if (useBarrier)
+        {
+            randomDirection = GetSafeDirection(randomDirection);
+        }
+
         roamTarget = (Vector2)transform.position + randomDirection * Random.Range(roamDistance * 0.5f, roamDistance);
     }
 
@@ -1161,7 +1261,6 @@ public class Mantis : MonoBehaviour
     {
         if (current <= 0 || isDead) return;
 
-
         if (isDefensiveMode && current > 0)
         {
             QuickJumpBack();
@@ -1173,8 +1272,6 @@ public class Mantis : MonoBehaviour
             attackCooldownTimer = 0.4f;
         }
     }
-
-
 
     private void TrackCoroutine(Coroutine coroutine)
     {
@@ -1216,5 +1313,34 @@ public class Mantis : MonoBehaviour
             healthModule.onInvincDamage -= OnParryTrigger;
             healthModule.onDeath -= HandleDeath;
         }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (useBarrier)
+        {
+            Gizmos.color = barrierGizmoColor;
+            Gizmos.DrawWireCube(barrierCenter, barrierSize);
+
+            Gizmos.color = IsInsideBarrier ? Color.green : Color.red;
+            Gizmos.DrawWireSphere(transform.position, 0.3f);
+        }
+    }
+
+    public void SetBarrier(Vector2 center, Vector2 size, bool enable = true)
+    {
+        barrierCenter = center;
+        barrierSize = size;
+        useBarrier = enable;
+    }
+
+    public void DisableBarrier()
+    {
+        useBarrier = false;
+    }
+
+    public void EnableBarrier()
+    {
+        useBarrier = true;
     }
 }

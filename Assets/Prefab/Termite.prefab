@@ -23,7 +23,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &4576032060994974967
 Transform:
   m_ObjectHideFlags: 0
@@ -178,10 +178,16 @@ MonoBehaviour:
     m_Bits: 1
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   maxStickDistance: 1.5
   stickRaycastDistance: 1
   attackCooldown: 2
+  useBarrier: 1
+  barrierCenter: {x: 2.5, y: 8.74}
+  barrierSize: {x: 5.76, y: 4.7}
+  barrierPushForce: 5.71
+  barrierCheckDistance: 0.32
+  barrierGizmoColor: {r: 1, g: 0.5, b: 0, a: 0.3}
 --- !u!114 &8340735085883778135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -305,4 +311,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthModule
   currentHealth: 0
+  whiteMaterial: {fileID: 0}
+  defaultMaterial: {fileID: 0}
   invincible: 0

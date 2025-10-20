@@ -386,6 +386,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 0f7def24997d1384fa29d091004067c9, type: 3}
   - {fileID: 8300000, guid: 5f055011b486e4945b59d808b015e960, type: 3}
   - {fileID: 8300000, guid: 70944422657d75345b5c78bc2e2121db, type: 3}
+  - {fileID: 8300000, guid: fddb97898e80d234ebb50d941e380b75, type: 3}
+  - {fileID: 8300000, guid: 46c866b0ab05b37429a172f03587e693, type: 3}
   musicList: []
 --- !u!114 &3934005791781461834
 MonoBehaviour:
@@ -446,7 +448,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 1
+  m_Volume: 0.5
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -543,7 +545,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 1
+  m_Volume: 0.5
   m_Pitch: 1
   Loop: 0
   Mute: 0

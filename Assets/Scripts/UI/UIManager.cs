@@ -55,18 +55,14 @@ public class UIManager : MonoBehaviour
 
     private IEnumerator SwitchExclusiveUI(BaseUI newUI)
     {
-        if (isSwitchingExclusive) yield break; // Prevent multiple switches at once
+        if (isSwitchingExclusive) yield break; 
 
         isSwitchingExclusive = true;
         BaseUI oldUI = currentExclusiveUI;
-
-        // First, fade out the current exclusive UI
         yield return StartCoroutine(FadeOutUI(oldUI));
 
-        // Update reference
         currentExclusiveUI = newUI;
 
-        // Then, fade in the new exclusive UI
         yield return StartCoroutine(FadeInUI(newUI));
 
         isSwitchingExclusive = false;
