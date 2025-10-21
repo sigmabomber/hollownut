@@ -15,6 +15,7 @@ public class HealthModule : MonoBehaviour
     public Material defaultMaterial;
     public bool invincible = false;
     private Renderer rendererrr;
+    public bool isDead = false;
 
     private void Awake()
     {
@@ -86,6 +87,7 @@ public class HealthModule : MonoBehaviour
     // For dying
     protected virtual void Die()
     {
+        isDead = true;
         onDeath?.Invoke();
     }
 

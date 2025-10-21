@@ -88,6 +88,8 @@ public class StickAttack : MonoBehaviour
             upKey = KeyCode.UpArrow;
             downKey = KeyCode.DownArrow;
         }
+
+        canAttack = GameManager.Instance.CurrentPlayer.Get<bool>("StickUnlocked");
     }
     private void UpdateKeybinds()
     {
@@ -116,15 +118,18 @@ public class StickAttack : MonoBehaviour
     private void Update()
     {
         if(!canAttack)
-        hasStickUnlocked = GameManager.Instance.CurrentPlayer.StickUnlocked;
+        {
+            canAttack = GameManager.Instance.CurrentPlayer.StickUnlocked;
+            
+            return;
+        }
 
         
-        if (canAttack)
-        {
+       
             GetDirection();
             GetInput();
             slashObj.SetActive(attacking);
-        }
+        
     }
 
     private void FixedUpdate()

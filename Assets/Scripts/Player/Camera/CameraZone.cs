@@ -31,9 +31,6 @@ public class CameraZone : MonoBehaviour
         {
             cam.SetZone(this);
         }
-            else
-            {
-                print(collision.name);
-            }
+            
     }
 }

@@ -35,6 +35,8 @@ public class SettingsData
         KeybindsList.Add(new KeybindPair { action = "dash", key = KeyCode.C });
         KeybindsList.Add(new KeybindPair { action = "interact", key = KeyCode.UpArrow });
         KeybindsList.Add(new KeybindPair { action = "attack", key = KeyCode.X });
+        KeybindsList.Add(new KeybindPair { action = "map", key = KeyCode.M }) ;
+
     }
 
     public void AddKey(string action, KeyCode key)
@@ -295,6 +297,7 @@ public class SettingsData
         KeybindsList.Add(new KeybindPair { action = "dash", key = KeyCode.C });
         KeybindsList.Add(new KeybindPair { action = "interact", key = KeyCode.UpArrow });
         KeybindsList.Add(new KeybindPair { action = "attack", key = KeyCode.X });
+        KeybindsList.Add(new KeybindPair { action = "map", key = KeyCode.M });
 
         SettingsUpdated?.Invoke();
     }
